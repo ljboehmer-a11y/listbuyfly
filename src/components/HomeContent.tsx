@@ -522,8 +522,25 @@ export default function HomeContent({ listings }: HomeContentProps) {
             </form>
           </div>
 
+          {/* Collection Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap mb-4">
+            {COLLECTIONS.map((collection) => (
+              <button
+                key={collection.id}
+                onClick={() => setActiveCollection(activeCollection === collection.id && collection.id !== 'all' ? 'all' : collection.id)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
+                  activeCollection === collection.id
+                    ? 'bg-amber-500 text-slate-900'
+                    : 'bg-slate-800 border border-slate-600 text-slate-300 hover:border-amber-500'
+                }`}
+              >
+                {collection.label}
+              </button>
+            ))}
+          </div>
+
           {/* ZIP Proximity Filter */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <select
                 value={zipDistance}
@@ -542,7 +559,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                 placeholder="ZIP Code"
                 value={zipCode}
                 onChange={(e) => setZipCode(e.target.value.replace(/\D/g, ''))}
-                className="w-24 px-3 py-2 rounded-lg border-0 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-24 px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
               <button
                 onClick={handleZipSearch}
@@ -559,23 +576,6 @@ export default function HomeContent({ listings }: HomeContentProps) {
                 <X className="w-3 h-3" /> Clear location
               </button>
             )}
-          </div>
-
-          {/* Collection Pills */}
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-            {COLLECTIONS.map((collection) => (
-              <button
-                key={collection.id}
-                onClick={() => setActiveCollection(activeCollection === collection.id && collection.id !== 'all' ? 'all' : collection.id)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
-                  activeCollection === collection.id
-                    ? 'bg-amber-500 text-slate-900'
-                    : 'bg-slate-800 border border-slate-600 text-slate-300 hover:border-amber-500'
-                }`}
-              >
-                {collection.label}
-              </button>
-            ))}
           </div>
         </div>
       </section>
