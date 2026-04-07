@@ -840,8 +840,8 @@ export default function HomeContent({ listings }: HomeContentProps) {
 
       {/* Compare Modal */}
       {showCompare && compareListings.length >= 2 && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-8">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-8" onClick={() => setShowCompare(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="bg-slate-900 text-white px-6 py-4 rounded-t-xl flex items-center justify-between">
               <h2 className="text-xl font-bold">Side-by-Side Comparison</h2>
               <button onClick={() => setShowCompare(false)} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
