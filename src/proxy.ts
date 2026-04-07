@@ -1,8 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest, NextFetchEvent } from 'next/server';
 
-// WordPress/PHP scanner bot paths — return 404 instantly
+// WordPress/PHP scanner bot paths — block before Clerk touches them
 const BLOCKED_PREFIXES = [
   '/wp-admin',
   '/wp-login',
@@ -28,22 +28,23 @@ const isProtectedRoute = createRouteMatcher([
   '/create(.*)',
 ]);
 
-export default clerkMiddleware(async (auth, req: NextRequest) => {
-  // Block bot scanner paths before any auth processing
-  if (isBlockedPath(req.nextUrl.pathname)) {
-    return new NextResponse(null, { status: 404 });
-  }
-
+const clerk = clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
 });
 
+// Intercept BEFORE Clerk so its handshake logic never fires on bot paths
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  if (isBlockedPath(req.nextUrl.pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+  return clerk(req, event);
+}
+
 export const config = {
   matcher: [
-    // Skip Next.js internals and static files
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
     '/(api|trpc)(.*)',
   ],
 };
