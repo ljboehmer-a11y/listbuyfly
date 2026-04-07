@@ -385,13 +385,6 @@ export default function HomeContent({ listings }: HomeContentProps) {
 
   const compareListings = listings.filter((l) => compareList.includes(l.id));
 
-  const engineLifePercent = (listing: Listing) => (listing.smoh / listing.tbo) * 100;
-  const engineLifeColor = (percent: number) => {
-    if (percent > 70) return 'bg-red-500';
-    if (percent > 40) return 'bg-amber-500';
-    return 'bg-emerald-500';
-  };
-
   // Cascading options: Type → Make → Model
   const listingMakes = Array.from(new Set(listings.map((l) => l.make)));
   const makes = filters.categories.length > 0
@@ -836,7 +829,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                 <button onClick={() => setShowCompare(true)} disabled={compareList.length < 2} className="bg-amber-500 text-slate-900 px-4 sm:px-6 py-2 rounded-lg font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                   Compare {compareList.length >= 2 ? `(${compareList.length})` : ''}
                 </button>
-                <button onClick={() => setCompareList([])} className="bg-slate-700 hover:bg-slate-600 px-4 sm:px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-1 text-sm">
+                <button onClick={() => { setCompareList([]); document.cookie = `lbf_favorites=${encodeURIComponent('[]')}; expires=${new Date(Date.now() + 90 * 864e5).toUTCString()}; path=/; SameSite=Lax`; }} className="bg-slate-700 hover:bg-slate-600 px-4 sm:px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-1 text-sm">
                   <X className="w-4 h-4" /> Clear
                 </button>
               </div>
@@ -854,13 +847,19 @@ export default function HomeContent({ listings }: HomeContentProps) {
               <button onClick={() => setShowCompare(false)} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed">
+                <colgroup>
+                  <col className="w-32" />
+                  {compareListings.map((l) => (
+                    <col key={l.id} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="p-4 text-left text-sm font-medium text-slate-500 w-40">Spec</th>
+                    <th className="p-4 text-left text-sm font-medium text-slate-500">Spec</th>
                     {compareListings.map((l) => (
-                      <th key={l.id} className="p-4 text-center min-w-[200px]">
-                        <div className="h-32 rounded-lg mb-3 overflow-hidden"><img src={l.images && l.images.length > 0 ? l.images[0] : getListingImages(l.id, l.make)[0]} alt={`${l.year} ${l.make} ${l.model}`} className="w-full h-full object-cover" /></div>
+                      <th key={l.id} className="p-4 text-center">
+                        <div className="aspect-[4/3] rounded-lg mb-3 overflow-hidden"><img src={l.images && l.images.length > 0 ? l.images[0] : getListingImages(l.id, l.make)[0]} alt={`${l.year} ${l.make} ${l.model}`} className="w-full h-full object-cover" /></div>
                         <a href={`/listing/${l.id}`} className="text-slate-900 font-bold hover:text-amber-500 transition-colors">{l.year} {l.make} {l.model}</a>
                         <p className="text-xs text-gray-500 mt-1">{l.nNumber}</p>
                         <button onClick={() => toggleCompare(l.id)} className="text-xs text-red-500 hover:text-red-600 mt-2">Remove</button>
@@ -874,20 +873,19 @@ export default function HomeContent({ listings }: HomeContentProps) {
                     { label: 'Year', render: (l: Listing) => <span>{l.year}</span> },
                     { label: 'TTAF', render: (l: Listing) => { const low = Math.min(...compareListings.map(c => c.ttaf)); return <span className={l.ttaf === low ? 'text-emerald-600 font-bold' : ''}>{l.ttaf.toLocaleString()} hrs{l.ttaf === low ? ' ★' : ''}</span>; }, bg: true },
                     { label: 'SMOH', render: (l: Listing) => { const low = Math.min(...compareListings.map(c => c.smoh)); return <span className={l.smoh === low ? 'text-emerald-600 font-bold' : ''}>{l.smoh.toLocaleString()} hrs{l.smoh === low ? ' ★' : ''}</span>; } },
-                    { label: 'Engine Life', render: (l: Listing) => { const p = engineLifePercent(l); return <><span>{p.toFixed(0)}%</span><div className="w-full bg-gray-200 rounded-full h-2 mt-1"><div className={`h-2 rounded-full ${engineLifeColor(p)}`} style={{ width: `${Math.min(p, 100)}%` }} /></div></>; }, bg: true },
-                    { label: 'TBO', render: (l: Listing) => <span>{l.tbo.toLocaleString()} hrs</span> },
-                    { label: 'Engine', render: (l: Listing) => <span className="text-sm">{l.engine}</span>, bg: true },
-                    { label: 'Propeller', render: (l: Listing) => <span className="text-sm">{l.prop}</span> },
-                    { label: 'Useful Load', render: (l: Listing) => { const hi = Math.max(...compareListings.map(c => c.usefulLoad)); return <span className={l.usefulLoad === hi ? 'text-emerald-600 font-bold' : ''}>{l.usefulLoad.toLocaleString()} lbs{l.usefulLoad === hi ? ' ★' : ''}</span>; }, bg: true },
-                    { label: 'Fuel', render: (l: Listing) => <span>{l.fuelCapacity} gal</span> },
-                    { label: 'Exterior', render: (l: Listing) => <span>{l.exteriorRating}</span>, bg: true },
-                    { label: 'Interior', render: (l: Listing) => <span>{l.interiorRating}</span> },
-                    { label: 'Logs', render: (l: Listing) => l.logsComplete ? <span className="text-emerald-600 font-medium">✓ Complete</span> : <span className="text-red-500">Partial</span>, bg: true },
-                    { label: 'Annual', render: (l: Listing) => l.annualCurrent ? <span className="text-emerald-600 font-medium">✓ Current</span> : <span className="text-red-500">Expired</span> },
-                    { label: 'Damage', render: (l: Listing) => !l.damageHistory ? <span className="text-emerald-600 font-medium">✓ Clean</span> : <span className="text-yellow-600">Yes</span>, bg: true },
-                    { label: 'Location', render: (l: Listing) => <span className="text-sm">{l.city}, {l.state}</span> },
-                    { label: 'Avionics', render: (l: Listing) => <div className="flex flex-wrap gap-1 justify-center">{l.avionics.map((a, i) => <span key={i} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">{a}</span>)}</div>, bg: true },
-                  ].map((row, i) => (
+                    { label: 'TBO', render: (l: Listing) => <span>{l.tbo.toLocaleString()} hrs</span>, bg: true },
+                    { label: 'Engine', render: (l: Listing) => <span className="text-sm">{l.engine}</span> },
+                    { label: 'Propeller', render: (l: Listing) => <span className="text-sm">{l.prop}</span>, bg: true },
+                    { label: 'Useful Load', render: (l: Listing) => { const hi = Math.max(...compareListings.map(c => c.usefulLoad)); const best = hi > 0 && l.usefulLoad === hi; return <span className={best ? 'text-emerald-600 font-bold' : ''}>{l.usefulLoad.toLocaleString()} lbs{best ? ' ★' : ''}</span>; } },
+                    { label: 'Fuel', render: (l: Listing) => <span>{l.fuelCapacity} gal</span>, bg: true },
+                    { label: 'Exterior', render: (l: Listing) => <span>{l.exteriorRating}</span> },
+                    { label: 'Interior', render: (l: Listing) => <span>{l.interiorRating}</span>, bg: true },
+                    { label: 'Logs', render: (l: Listing) => l.logsComplete ? <span className="text-emerald-600 font-medium">✓ Complete</span> : <span className="text-red-500">Partial</span> },
+                    { label: 'Annual', render: (l: Listing) => l.annualCurrent ? <span className="text-emerald-600 font-medium">✓ Current</span> : <span className="text-red-500">Expired</span>, bg: true },
+                    { label: 'Damage', render: (l: Listing) => !l.damageHistory ? <span className="text-emerald-600 font-medium">✓ Clean</span> : <span className="text-yellow-600">Yes</span> },
+                    { label: 'Location', render: (l: Listing) => <span className="text-sm">{l.city}, {l.state}</span>, bg: true },
+                    { label: 'Avionics', render: (l: Listing) => <div className="flex flex-wrap gap-1 justify-center">{l.avionics.map((a, i) => <span key={i} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">{a}</span>)}</div> },
+                  ].map((row) => (
                     <tr key={row.label} className={`border-b border-gray-100 ${row.bg ? 'bg-gray-50' : ''}`}>
                       <td className="p-4 text-sm font-semibold text-slate-700">{row.label}</td>
                       {compareListings.map((l) => <td key={l.id} className="p-4 text-center font-medium text-slate-900">{row.render(l)}</td>)}
@@ -897,7 +895,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
               </table>
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-              <button onClick={() => { setCompareList([]); setShowCompare(false); }} className="text-slate-500 hover:text-slate-700 font-medium">Clear All</button>
+              <button onClick={() => { setCompareList([]); setShowCompare(false); document.cookie = `lbf_favorites=${encodeURIComponent('[]')}; expires=${new Date(Date.now() + 90 * 864e5).toUTCString()}; path=/; SameSite=Lax`; }} className="text-slate-500 hover:text-slate-700 font-medium">Clear All</button>
               <button onClick={() => setShowCompare(false)} className="bg-slate-900 text-white px-6 py-2 rounded-lg font-semibold hover:bg-slate-800 transition-colors">Back to Listings</button>
             </div>
           </div>
