@@ -75,8 +75,7 @@ export default function CompareButton() {
 
   if (!mounted || favCount < 1) return null;
 
-  const engineLifePercent = (l: Listing) => (l.smoh / l.tbo) * 100;
-  const engineLifeColor = (p: number) => p > 70 ? 'bg-red-500' : p > 40 ? 'bg-amber-500' : 'bg-emerald-500';
+  // engineLifePercent/color removed — not seller-friendly
 
   return (
     <>
@@ -109,12 +108,18 @@ export default function CompareButton() {
               <div className="p-12 text-center text-slate-500">Loading comparison...</div>
             ) : listings.length >= 2 ? (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col className="w-32" />
+                    {listings.map((l) => (
+                      <col key={l.id} />
+                    ))}
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="p-4 text-left text-sm font-medium text-slate-500 w-40">Spec</th>
+                      <th className="p-4 text-left text-sm font-medium text-slate-500">Spec</th>
                       {listings.map((l) => (
-                        <th key={l.id} className="p-4 text-center min-w-[200px]">
+                        <th key={l.id} className="p-4 text-center">
                           <div className="h-32 rounded-lg mb-3 overflow-hidden">
                             <img
                               src={l.images && l.images.length > 0 ? l.images[0] : getListingImages(l.id, l.make)[0]}
@@ -139,11 +144,10 @@ export default function CompareButton() {
                       { label: 'Year', render: (l: Listing) => <span>{l.year}</span> },
                       { label: 'TTAF', render: (l: Listing) => { const low = Math.min(...listings.map(c => c.ttaf)); return <span className={l.ttaf === low ? 'text-emerald-600 font-bold' : ''}>{l.ttaf.toLocaleString()} hrs{l.ttaf === low ? ' ★' : ''}</span>; }, bg: true },
                       { label: 'SMOH', render: (l: Listing) => { const low = Math.min(...listings.map(c => c.smoh)); return <span className={l.smoh === low ? 'text-emerald-600 font-bold' : ''}>{l.smoh.toLocaleString()} hrs{l.smoh === low ? ' ★' : ''}</span>; } },
-                      { label: 'Engine Life', render: (l: Listing) => { const p = engineLifePercent(l); return <><span>{p.toFixed(0)}%</span><div className="w-full bg-gray-200 rounded-full h-2 mt-1"><div className={`h-2 rounded-full ${engineLifeColor(p)}`} style={{ width: `${Math.min(p, 100)}%` }} /></div></>; }, bg: true },
-                      { label: 'TBO', render: (l: Listing) => <span>{l.tbo.toLocaleString()} hrs</span> },
-                      { label: 'Engine', render: (l: Listing) => <span className="text-sm">{l.engine}</span>, bg: true },
-                      { label: 'Propeller', render: (l: Listing) => <span className="text-sm">{l.prop}</span> },
-                      { label: 'Useful Load', render: (l: Listing) => { const hi = Math.max(...listings.map(c => c.usefulLoad)); return <span className={l.usefulLoad === hi ? 'text-emerald-600 font-bold' : ''}>{l.usefulLoad.toLocaleString()} lbs{l.usefulLoad === hi ? ' ★' : ''}</span>; }, bg: true },
+                      { label: 'TBO', render: (l: Listing) => <span>{l.tbo.toLocaleString()} hrs</span>, bg: true },
+                      { label: 'Engine', render: (l: Listing) => <span className="text-sm">{l.engine}</span> },
+                      { label: 'Propeller', render: (l: Listing) => <span className="text-sm">{l.prop}</span>, bg: true },
+                      { label: 'Useful Load', render: (l: Listing) => { const hi = Math.max(...listings.map(c => c.usefulLoad)); const best = hi > 0 && l.usefulLoad === hi; return <span className={best ? 'text-emerald-600 font-bold' : ''}>{l.usefulLoad.toLocaleString()} lbs{best ? ' ★' : ''}</span>; } },
                       { label: 'Fuel', render: (l: Listing) => <span>{l.fuelCapacity} gal</span> },
                       { label: 'Exterior', render: (l: Listing) => <span>{l.exteriorRating}</span>, bg: true },
                       { label: 'Interior', render: (l: Listing) => <span>{l.interiorRating}</span> },
