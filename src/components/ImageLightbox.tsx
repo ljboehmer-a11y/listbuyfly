@@ -77,8 +77,7 @@ export default function ImageLightbox({ images, alt, initialIndex = 0, onClose }
         <img
           src={images[current]}
           alt={`${alt} - Photo ${current + 1}`}
-          className="w-full h-full object-contain select-none"
-          onClick={(e) => e.stopPropagation()}
+          className="w-full h-full object-contain select-none pointer-events-none"
           draggable={false}
         />
 

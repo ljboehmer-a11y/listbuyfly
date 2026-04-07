@@ -21,7 +21,7 @@ export default function DescriptionBlock({ text }: { text: string }) {
       <h2 className="text-2xl font-bold text-slate-900 mb-4">About This Aircraft</h2>
       <p
         ref={ref}
-        className="text-gray-700 leading-relaxed mb-2"
+        className="text-gray-700 leading-relaxed mb-2 whitespace-pre-line"
         style={{
           display: '-webkit-box',
           WebkitLineClamp: 10,
