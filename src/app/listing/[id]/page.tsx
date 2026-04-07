@@ -8,6 +8,7 @@ import { getListingImages } from '@/data/aircraftImages';
 import LeadCaptureForm from '@/components/LeadCaptureForm';
 import FavoriteButton from '@/components/FavoriteButton';
 import CompareButton from '@/components/CompareButton';
+import DescriptionBlock from '@/components/DescriptionBlock';
 import { getListingById, getAllListings } from '@/lib/db';
 
 // Dynamic rendering — every listing (including user-created) served on demand
@@ -155,8 +156,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
             {/* Description */}
             <section className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">About This Aircraft</h2>
-              <p className="text-gray-700 leading-relaxed mb-6">{listing.description}</p>
+              <DescriptionBlock text={listing.description} />
 
               {/* Quick Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
