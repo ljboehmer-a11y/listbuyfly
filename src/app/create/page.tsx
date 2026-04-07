@@ -107,6 +107,7 @@ function CreateListingForm() {
   const [originalTier, setOriginalTier] = useState<string>('free');
   const [originalStatus, setOriginalStatus] = useState<string>('active');
   const [promoCode, setPromoCode] = useState('');
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   // Fetch existing listing data when in edit mode
   useEffect(() => {
@@ -230,6 +231,31 @@ function CreateListingForm() {
 
   const handleRemoveImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Unified image list for drag reordering (existing + new combined)
+  const totalImages = [
+    ...existingImages.map((src, i) => ({ type: 'existing' as const, src, preview: src, idx: i })),
+    ...images.map((img, i) => ({ type: 'new' as const, src: '', preview: img.preview, idx: i, file: img.file })),
+  ];
+
+  const handleDragReorder = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const reordered = [...totalImages];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    // Split back into existing and new
+    const newExisting: string[] = [];
+    const newImages: { file: File; preview: string }[] = [];
+    for (const item of reordered) {
+      if (item.type === 'existing') {
+        newExisting.push(item.src);
+      } else {
+        newImages.push({ file: (item as any).file, preview: item.preview });
+      }
+    }
+    setExistingImages(newExisting);
+    setImages(newImages);
   };
 
   const handleAddAvionics = () => {
@@ -700,43 +726,48 @@ function CreateListingForm() {
               </p>
             </div>
 
-            {(existingImages.length > 0 || images.length > 0) && (
-              <div className="flex flex-wrap gap-3">
-                {/* Existing images from DB */}
-                {existingImages.map((src, idx) => (
-                  <div key={`existing-${idx}`} className="relative">
-                    <img
-                      src={src}
-                      alt={`Existing ${idx}`}
-                      className="w-24 h-24 object-cover rounded-lg border border-gray-300"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExistingImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+            {totalImages.length > 0 && (
+              <>
+                <p className="text-xs text-gray-500 mb-2">Drag to reorder — first image is the cover photo</p>
+                <div className="flex flex-wrap gap-3">
+                  {totalImages.map((item, idx) => (
+                    <div
+                      key={`${item.type}-${idx}`}
+                      draggable
+                      onDragStart={() => setDragIdx(idx)}
+                      onDragOver={(e) => { e.preventDefault(); }}
+                      onDrop={(e) => { e.preventDefault(); if (dragIdx !== null) { handleDragReorder(dragIdx, idx); setDragIdx(null); } }}
+                      onDragEnd={() => setDragIdx(null)}
+                      className={`relative cursor-grab active:cursor-grabbing transition-all ${
+                        dragIdx === idx ? 'opacity-40 scale-95' : ''
+                      } ${idx === 0 ? 'ring-2 ring-amber-500 rounded-lg' : ''}`}
                     >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-                {/* Newly uploaded images */}
-                {images.map((img, idx) => (
-                  <div key={`new-${idx}`} className="relative">
-                    <img
-                      src={img.preview}
-                      alt={`Preview ${idx}`}
-                      className="w-24 h-24 object-cover rounded-lg border border-gray-300"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <img
+                        src={item.preview}
+                        alt={`Photo ${idx + 1}`}
+                        className="w-24 h-24 object-cover rounded-lg border border-gray-300 pointer-events-none"
+                      />
+                      {idx === 0 && (
+                        <span className="absolute bottom-1 left-1 bg-amber-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded">COVER</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (item.type === 'existing') {
+                            handleRemoveExistingImage(existingImages.indexOf(item.src));
+                          } else {
+                            const newIdx = images.findIndex((img) => img.preview === item.preview);
+                            if (newIdx !== -1) handleRemoveImage(newIdx);
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </section>
 
