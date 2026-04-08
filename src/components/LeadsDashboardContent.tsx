@@ -179,11 +179,6 @@ export default function LeadsDashboardContent({ leads, listings }: LeadsDashboar
                       <h3 className="text-lg font-semibold text-slate-900 truncate">
                         {lead.buyer_name}
                       </h3>
-                      {lead.marketing_consent && (
-                        <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full flex-shrink-0">
-                          Marketing Opt-in
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-slate-600 mb-3">
