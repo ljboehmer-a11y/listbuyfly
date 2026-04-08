@@ -5,7 +5,7 @@ import { listings as seedListings } from '@/data/listings';
 import { Listing } from '@/lib/types';
 import ADPImageGallery from '@/components/ADPImageGallery';
 import { getListingImages } from '@/data/aircraftImages';
-import LeadCaptureForm from '@/components/LeadCaptureForm';
+import ADPContactSidebar from '@/components/ADPContactSidebar';
 import FavoriteButton from '@/components/FavoriteButton';
 import CompareButton from '@/components/CompareButton';
 import DescriptionBlock from '@/components/DescriptionBlock';
@@ -331,54 +331,13 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
           {/* Right Column - Contact & CTA */}
           <div className="lg:col-span-1">
-            {/* Contact Section */}
-            {isPaid ? (
-              <div className="sticky top-4 space-y-6 mb-6">
-                <div className="bg-white border-2 border-amber-500 rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">Contact Seller</h3>
-
-                  <div className="space-y-4 mb-6">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Seller Name</p>
-                      <p className="font-semibold text-slate-900">{listing.sellerName}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Phone</p>
-                      <a
-                        href={`tel:${listing.sellerPhone}`}
-                        className="font-semibold text-amber-500 hover:text-amber-600"
-                      >
-                        {listing.sellerPhone}
-                      </a>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Email</p>
-                      <a
-                        href={`mailto:${listing.sellerEmail}`}
-                        className="font-semibold text-amber-500 hover:text-amber-600 break-all"
-                      >
-                        {listing.sellerEmail}
-                      </a>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`mailto:${listing.sellerEmail}?subject=Inquiry about ${listing.year} ${listing.make} ${listing.model}`}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3 rounded-lg transition-colors block text-center"
-                  >
-                    Send Email
-                  </a>
-                </div>
-                <LeadCaptureForm listingId={listing.id} defaultMarketingConsent={true} hideHeader={true} />
-              </div>
-            ) : (
-              <div className="sticky top-4 mb-6">
-                <LeadCaptureForm listingId={listing.id} defaultMarketingConsent={true} />
-              </div>
-            )}
-
+            <ADPContactSidebar
+              listingId={listing.id}
+              isPaid={isPaid}
+              sellerName={listing.sellerName}
+              sellerPhone={listing.sellerPhone}
+              sellerEmail={listing.sellerEmail}
+            />
           </div>
         </div>
       </main>
