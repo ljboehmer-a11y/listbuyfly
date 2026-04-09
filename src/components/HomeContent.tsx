@@ -203,6 +203,22 @@ export default function HomeContent({ listings }: HomeContentProps) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const [showMobileToolbar, setShowMobileToolbar] = useState(false);
+  const listingGridRef = useRef<HTMLDivElement>(null);
+
+  // Show mobile toolbar only after user scrolls past the listing grid top
+  useEffect(() => {
+    const el = listingGridRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowMobileToolbar(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: '-80px 0px 0px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Restore scroll position after listings render
   useEffect(() => {
@@ -475,20 +491,24 @@ export default function HomeContent({ listings }: HomeContentProps) {
         </div>
       </header>
 
-      {/* Mobile Sticky Toolbar — visible only on small screens */}
-      <div className="sm:hidden sticky top-[52px] z-40 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-1">
+      {/* Mobile Floating Toolbar — appears when user scrolls past listings */}
+      <div
+        className={`sm:hidden fixed top-16 left-4 right-4 z-40 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${
+          showMobileToolbar ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <div className="flex items-center gap-0.5">
             <button
               onClick={() => setMobileSortOpen(true)}
-              className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+              className="flex flex-col items-center px-3 py-1 rounded-full hover:bg-slate-100 transition-colors"
             >
               <ArrowUpDown className="w-4 h-4 text-slate-700" />
               <span className="text-[10px] font-medium text-slate-700">sort</span>
             </button>
             <button
               onClick={() => setMobileFilterOpen(true)}
-              className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors relative"
+              className="flex flex-col items-center px-3 py-1 rounded-full hover:bg-slate-100 transition-colors relative"
             >
               <SlidersHorizontal className="w-4 h-4 text-slate-700" />
               <span className="text-[10px] font-medium text-slate-700">filter</span>
@@ -500,7 +520,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
             </button>
             <button
               onClick={() => setMobileSearchOpen(true)}
-              className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+              className="flex flex-col items-center px-3 py-1 rounded-full hover:bg-slate-100 transition-colors"
             >
               <Search className="w-4 h-4 text-slate-700" />
               <span className="text-[10px] font-medium text-slate-700">find</span>
@@ -508,7 +528,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
           </div>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+            className="flex flex-col items-center px-3 py-1 rounded-full hover:bg-slate-100 transition-colors"
           >
             <ArrowUp className="w-4 h-4 text-slate-700" />
             <span className="text-[10px] font-medium text-slate-700">to top</span>
@@ -982,7 +1002,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-12">
-        <div className="mb-6 flex justify-between items-center">
+        <div ref={listingGridRef} className="mb-6 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-slate-900">
             {filteredListings.length} aircraft available
           </h3>
