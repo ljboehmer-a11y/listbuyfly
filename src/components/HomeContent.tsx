@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, X, SlidersHorizontal, Heart, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Heart, ChevronDown, ChevronUp, MapPin, ArrowUpDown, ArrowUp } from 'lucide-react';
 import { Listing, Filters } from '@/lib/types';
 import ImageCarousel from './ImageCarousel';
 import { getListingImages } from '@/data/aircraftImages';
@@ -200,6 +200,9 @@ export default function HomeContent({ listings }: HomeContentProps) {
   const [zipDistance, setZipDistance] = useState(0);
   const [zipCoords, setZipCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [listingCoords, setListingCoords] = useState<Record<string, { lat: number; lng: number }>>({});
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
 
   // Restore scroll position after listings render
   useEffect(() => {
@@ -471,6 +474,258 @@ export default function HomeContent({ listings }: HomeContentProps) {
           </nav>
         </div>
       </header>
+
+      {/* Mobile Sticky Toolbar — visible only on small screens */}
+      <div className="sm:hidden sticky top-[52px] z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setMobileSortOpen(true)}
+              className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              <ArrowUpDown className="w-4 h-4 text-slate-700" />
+              <span className="text-[10px] font-medium text-slate-700">sort</span>
+            </button>
+            <button
+              onClick={() => setMobileFilterOpen(true)}
+              className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors relative"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-slate-700" />
+              <span className="text-[10px] font-medium text-slate-700">filter</span>
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-900 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setMobileSearchOpen(true)}
+              className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              <Search className="w-4 h-4 text-slate-700" />
+              <span className="text-[10px] font-medium text-slate-700">find</span>
+            </button>
+          </div>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex flex-col items-center px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+          >
+            <ArrowUp className="w-4 h-4 text-slate-700" />
+            <span className="text-[10px] font-medium text-slate-700">to top</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Sort Modal */}
+      {mobileSortOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:hidden" onClick={() => setMobileSortOpen(false)}>
+          <div className="bg-white rounded-t-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-3">
+              <h3 className="text-lg font-bold text-slate-900">Sort by...</h3>
+              <button onClick={() => setMobileSortOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
+            </div>
+            <div className="pb-8">
+              {[
+                { value: 'newest', label: 'Newest Listed' },
+                { value: 'priceDesc', label: 'Highest Price' },
+                { value: 'priceAsc', label: 'Lowest Price' },
+                { value: 'yearDesc', label: 'Newest Year' },
+                { value: 'lowTtaf', label: 'Lowest TTAF' },
+                { value: 'lowSmoh', label: 'Lowest SMOH' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setSortBy(opt.value); setMobileSortOpen(false); }}
+                  className={`w-full text-left px-6 py-4 text-base transition-colors ${
+                    sortBy === opt.value
+                      ? 'bg-slate-100 font-semibold text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="flex items-center justify-between">
+                    {opt.label}
+                    {sortBy === opt.value && <span className="text-amber-500 text-lg">✓</span>}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Search Modal */}
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-12 sm:hidden" onClick={() => setMobileSearchOpen(false)}>
+          <div className="bg-white rounded-2xl w-[90%] max-h-[80vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search all inventory..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900"
+                  />
+                </div>
+                <button
+                  onClick={() => setMobileSearchOpen(false)}
+                  className="px-4 py-3 bg-amber-500 text-slate-900 rounded-lg font-bold hover:bg-amber-600 transition-colors"
+                >
+                  GO
+                </button>
+              </div>
+
+              {/* Collection pills in search modal */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {COLLECTIONS.map((collection) => (
+                  <button
+                    key={collection.id}
+                    onClick={() => { setActiveCollection(activeCollection === collection.id && collection.id !== 'all' ? 'all' : collection.id); }}
+                    className={`px-3 py-1.5 rounded-full font-medium transition-colors text-xs ${
+                      activeCollection === collection.id
+                        ? 'bg-amber-500 text-slate-900'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {collection.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick results preview */}
+              {searchQuery.trim() && (
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-slate-500 mb-2">{filteredListings.length} results</p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {filteredListings.slice(0, 8).map((l) => (
+                      <a
+                        key={l.id}
+                        href={`/listing/${l.id}`}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 no-underline"
+                      >
+                        <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 bg-slate-100">
+                          <img
+                            src={l.images && l.images.length > 0 ? l.images[0] : getListingImages(l.id, l.make)[0]}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{l.year} {l.make} {l.model}</p>
+                          <p className="text-sm text-slate-500">${l.price.toLocaleString()}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Filter Modal */}
+      {mobileFilterOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:hidden" onClick={() => setMobileFilterOpen(false)}>
+          <div className="bg-white rounded-t-2xl w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-100 flex items-center justify-between px-6 pt-5 pb-3 z-10">
+              <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+              <div className="flex items-center gap-3">
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => { setFilters({ ...EMPTY_FILTERS }); setSearchQuery(''); }}
+                    className="text-sm text-red-500 font-semibold"
+                  >
+                    Clear all
+                  </button>
+                )}
+                <button onClick={() => setMobileFilterOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
+              </div>
+            </div>
+            <div className="px-6 py-4 space-y-5 pb-8">
+              {/* Applied tags */}
+              {appliedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {appliedTags.map((tag, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-sm font-medium">
+                      {tag.label}
+                      <button onClick={tag.onRemove}><X className="w-3.5 h-3.5" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <MultiSelect label="Type" options={AIRCRAFT_CATEGORIES} selected={filters.categories} onChange={(val) => setFilters((p) => ({ ...p, categories: val, makes: [], models: [] }))} placeholder="All Types" />
+              <MultiSelect label="Make" options={makes} selected={filters.makes} onChange={(val) => setFilters((p) => ({ ...p, makes: val, models: [] }))} placeholder="All Makes" />
+              <MultiSelect label="Model" options={models} selected={filters.models} onChange={(val) => setFilters((p) => ({ ...p, models: val }))} placeholder={filters.makes.length ? 'All Models' : 'Select make first'} />
+              <MultiSelect label="State" options={STATES} selected={filters.states} onChange={(val) => setFilters((p) => ({ ...p, states: val }))} placeholder="All States" />
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Price Range</label>
+                <div className="flex gap-2">
+                  <input type="number" value={filters.minPrice ?? ''} onChange={(e) => setFilters((p) => ({ ...p, minPrice: e.target.value ? parseInt(e.target.value) : undefined }))} placeholder="Min" className="w-1/2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                  <input type="number" value={filters.maxPrice ?? ''} onChange={(e) => setFilters((p) => ({ ...p, maxPrice: e.target.value ? parseInt(e.target.value) : undefined }))} placeholder="Max" className="w-1/2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Year Range</label>
+                <div className="flex gap-2">
+                  <input type="number" value={filters.yearMin ?? ''} onChange={(e) => setFilters((p) => ({ ...p, yearMin: e.target.value ? parseInt(e.target.value) : undefined }))} placeholder="From" className="w-1/2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                  <input type="number" value={filters.yearMax ?? ''} onChange={(e) => setFilters((p) => ({ ...p, yearMax: e.target.value ? parseInt(e.target.value) : undefined }))} placeholder="To" className="w-1/2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Max TTAF</label>
+                <input type="number" value={filters.maxTTAF ?? ''} onChange={(e) => setFilters((p) => ({ ...p, maxTTAF: e.target.value ? parseInt(e.target.value) : undefined }))} placeholder="e.g. 5000" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Max SMOH</label>
+                <input type="number" value={filters.maxSMOH ?? ''} onChange={(e) => setFilters((p) => ({ ...p, maxSMOH: e.target.value ? parseInt(e.target.value) : undefined }))} placeholder="e.g. 1000" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+
+              {/* ZIP Proximity */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Distance From ZIP</label>
+                <div className="flex gap-2">
+                  <select value={zipDistance} onChange={(e) => { setZipDistance(Number(e.target.value)); if (Number(e.target.value) > 0 && zipCode.length === 5) handleZipSearch(); }} className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    {DISTANCE_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                  </select>
+                  <input type="text" inputMode="numeric" maxLength={5} placeholder="ZIP" value={zipCode} onChange={(e) => setZipCode(e.target.value.replace(/\D/g, ''))} className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                  <button onClick={handleZipSearch} className="px-3 py-2.5 bg-amber-500 text-slate-900 rounded-lg font-bold text-sm">Go</button>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={filters.completeLogsOnly} onChange={(e) => setFilters((p) => ({ ...p, completeLogsOnly: e.target.checked }))} className="w-5 h-5 accent-amber-500 rounded" />
+                  <span className="text-sm font-medium text-slate-700">Complete Logs Only</span>
+                </label>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={filters.currentAnnualOnly} onChange={(e) => setFilters((p) => ({ ...p, currentAnnualOnly: e.target.checked }))} className="w-5 h-5 accent-amber-500 rounded" />
+                  <span className="text-sm font-medium text-slate-700">Current Annual Only</span>
+                </label>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={filters.noDamageOnly} onChange={(e) => setFilters((p) => ({ ...p, noDamageOnly: e.target.checked }))} className="w-5 h-5 accent-amber-500 rounded" />
+                  <span className="text-sm font-medium text-slate-700">No Damage History</span>
+                </label>
+              </div>
+
+              <button
+                onClick={() => setMobileFilterOpen(false)}
+                className="w-full bg-amber-500 text-slate-900 font-bold py-3 rounded-lg hover:bg-amber-600 transition-colors mt-2"
+              >
+                Show {filteredListings.length} Results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="bg-slate-900 text-white py-8 sm:py-16 border-b border-slate-800">
