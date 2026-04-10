@@ -315,15 +315,53 @@ function CreateListingForm() {
         });
 
         if (!uploadRes.ok) {
-          throw new Error('Failed to upload images');
+          const errText = await uploadRes.text().catch(() => 'Unknown upload error');
+          throw new Error(`Failed to upload images: ${errText}`);
         }
 
         const uploadData = await uploadRes.json();
         newImageUrls = uploadData.urls;
       }
 
-      // Existing images are already URLs (Blob) or base64 (legacy) — keep as-is
-      const allImages = [...existingImages, ...newImageUrls];
+      // Migrate any legacy base64 existing images to Blob
+      const migratedExisting: string[] = [];
+      const base64Images: string[] = [];
+      for (const img of existingImages) {
+        if (img.startsWith('data:')) {
+          base64Images.push(img);
+        } else {
+          migratedExisting.push(img); // Already a URL
+        }
+      }
+
+      if (base64Images.length > 0) {
+        // Convert base64 strings to File objects and upload to Blob
+        const blobs = await Promise.all(
+          base64Images.map(async (dataUrl, i) => {
+            const res = await fetch(dataUrl);
+            const blob = await res.blob();
+            return new File([blob], `existing-${i}.jpg`, { type: blob.type || 'image/jpeg' });
+          })
+        );
+
+        const migrateForm = new FormData();
+        blobs.forEach((file) => migrateForm.append('files', file));
+
+        const migrateRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: migrateForm,
+        });
+
+        if (migrateRes.ok) {
+          const migrateData = await migrateRes.json();
+          migratedExisting.push(...migrateData.urls);
+        } else {
+          // If migration fails, skip those images rather than blocking the save
+          console.warn('Failed to migrate base64 images to Blob');
+        }
+      }
+
+      const allImages = [...migratedExisting, ...newImageUrls];
 
       // Strip commas from numeric strings before parsing
       const num = (val: string, fallback = 0) => parseInt(val.replace(/,/g, '')) || fallback;
@@ -376,7 +414,8 @@ function CreateListingForm() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to update listing');
+          const errBody = await response.text().catch(() => '');
+          throw new Error(`Failed to update listing (${response.status}): ${errBody}`);
         }
 
         const editData = await response.json();
@@ -417,7 +456,8 @@ function CreateListingForm() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create listing');
+          const errBody = await response.text().catch(() => '');
+          throw new Error(`Failed to create listing (${response.status}): ${errBody}`);
         }
 
         const data = await response.json();
@@ -456,7 +496,9 @@ function CreateListingForm() {
         }, 2000);
       }
     } catch (error) {
-      alert(isEditMode ? 'Error updating listing. Please try again.' : 'Error creating listing. Please try again.');
+      console.error('Listing submit error:', error);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`${isEditMode ? 'Error updating listing' : 'Error creating listing'}: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }

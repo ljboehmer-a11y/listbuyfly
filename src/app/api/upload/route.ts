@@ -2,6 +2,7 @@ import { put } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow up to 60s for large multi-image uploads
 
 export async function POST(request: NextRequest) {
   try {
