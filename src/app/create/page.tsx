@@ -206,20 +206,26 @@ function CreateListingForm() {
   const handleImageUpload = (files: FileList | null) => {
     if (!files) return;
 
-    const newImages = Array.from(files).filter(file => {
-      return file.type.startsWith('image/');
-    });
+    const newImages = Array.from(files).filter(file => file.type.startsWith('image/'));
+    if (newImages.length === 0) return;
 
-    const availableSlots = maxImages - totalImageCount;
+    // Recalculate limit fresh each call to avoid stale closure issues
+    const currentMax = formData.tier === 'paid' ? 20 : 5;
+    const currentTotal = existingImages.length + images.length;
+    const availableSlots = currentMax - currentTotal;
+    if (availableSlots <= 0) return;
+
     const imagesToAdd = newImages.slice(0, availableSlots);
 
     imagesToAdd.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImages((prev) => [
-          ...prev,
-          { file, preview: reader.result as string }
-        ]);
+        setImages((prev) => {
+          // Guard: re-check limit inside the async callback
+          const totalNow = existingImages.length + prev.length;
+          if (totalNow >= currentMax) return prev;
+          return [...prev, { file, preview: reader.result as string }];
+        });
       };
       reader.readAsDataURL(file);
     });
@@ -706,10 +712,15 @@ function CreateListingForm() {
               <p className="text-sm text-gray-700 mb-2">Drag and drop images here</p>
               <label className="inline-block">
                 <input
+                  key={`file-input-${maxImages}-${totalImageCount >= maxImages}`}
                   type="file"
                   multiple
                   accept="image/*"
-                  onChange={(e) => handleImageUpload(e.target.files)}
+                  onChange={(e) => {
+                    handleImageUpload(e.target.files);
+                    // Reset input value so same files can be re-selected
+                    e.target.value = '';
+                  }}
                   disabled={totalImageCount >= maxImages}
                   className="hidden"
                 />
