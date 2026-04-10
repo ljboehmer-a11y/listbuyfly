@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Listing } from '@/lib/types';
 import { createListing, getAllListings, getListingById, updateListing, updateListingStatus } from '@/lib/db';
 
+// Increase body size limit to handle base64 images (default is 1MB)
+export const maxDuration = 30; // seconds
+export const dynamic = 'force-dynamic';
+
 // Validate promo code against env var (comma-separated list)
 function isValidPromoCode(code: string | undefined): boolean {
   if (!code) return false;

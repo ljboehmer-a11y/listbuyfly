@@ -220,6 +220,34 @@ function CreateListingForm() {
     }
   };
 
+  // Compress an image file via canvas — max 1600px wide, JPEG quality 0.7
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 1600;
+        const maxH = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW) { h = (h * maxW) / w; w = maxW; }
+        if (h > maxH) { w = (w * maxH) / h; h = maxH; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = () => {
+        // Fallback: read as-is if canvas fails
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleImageUpload = (files: FileList | null) => {
     if (!files) return;
 
@@ -234,17 +262,13 @@ function CreateListingForm() {
 
     const imagesToAdd = newImages.slice(0, availableSlots);
 
-    imagesToAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImages((prev) => {
-          // Guard: re-check limit inside the async callback
-          const totalNow = existingImages.length + prev.length;
-          if (totalNow >= currentMax) return prev;
-          return [...prev, { file, preview: reader.result as string }];
-        });
-      };
-      reader.readAsDataURL(file);
+    imagesToAdd.forEach(async (file) => {
+      const compressed = await compressImage(file);
+      setImages((prev) => {
+        const totalNow = existingImages.length + prev.length;
+        if (totalNow >= currentMax) return prev;
+        return [...prev, { file, preview: compressed }];
+      });
     });
   };
 
@@ -307,16 +331,8 @@ function CreateListingForm() {
     setIsSubmitting(true);
 
     try {
-      // Convert NEW image files to base64 data URIs
-      const newImageDataUrls: string[] = [];
-      for (const img of images) {
-        const dataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(img.file);
-        });
-        newImageDataUrls.push(dataUrl);
-      }
+      // Use the already-compressed preview strings (resized via canvas on upload)
+      const newImageDataUrls = images.map((img) => img.preview);
 
       // Combine existing images (kept from DB) with newly uploaded ones
       const allImages = [...existingImages, ...newImageDataUrls];
