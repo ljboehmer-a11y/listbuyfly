@@ -220,41 +220,12 @@ function CreateListingForm() {
     }
   };
 
-  // Compress an image file via canvas — max 1600px wide, JPEG quality 0.7
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const maxW = 1600;
-        const maxH = 1200;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxW) { h = (h * maxW) / w; w = maxW; }
-        if (h > maxH) { w = (w * maxH) / h; h = maxH; }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
-      };
-      img.onerror = () => {
-        // Fallback: read as-is if canvas fails
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const handleImageUpload = (files: FileList | null) => {
     if (!files) return;
 
     const newImages = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (newImages.length === 0) return;
 
-    // Recalculate limit fresh each call to avoid stale closure issues
     const currentMax = formData.tier === 'paid' ? 20 : 5;
     const currentTotal = existingImages.length + images.length;
     const availableSlots = currentMax - currentTotal;
@@ -262,12 +233,13 @@ function CreateListingForm() {
 
     const imagesToAdd = newImages.slice(0, availableSlots);
 
-    imagesToAdd.forEach(async (file) => {
-      const compressed = await compressImage(file);
+    imagesToAdd.forEach((file) => {
+      // Create a local preview URL for display in the form (no base64 needed)
+      const preview = URL.createObjectURL(file);
       setImages((prev) => {
         const totalNow = existingImages.length + prev.length;
         if (totalNow >= currentMax) return prev;
-        return [...prev, { file, preview: compressed }];
+        return [...prev, { file, preview }];
       });
     });
   };
@@ -331,11 +303,27 @@ function CreateListingForm() {
     setIsSubmitting(true);
 
     try {
-      // Use the already-compressed preview strings (resized via canvas on upload)
-      const newImageDataUrls = images.map((img) => img.preview);
+      // Upload new images to Vercel Blob (full quality, no base64 in payload)
+      let newImageUrls: string[] = [];
+      if (images.length > 0) {
+        const uploadForm = new FormData();
+        images.forEach((img) => uploadForm.append('files', img.file));
 
-      // Combine existing images (kept from DB) with newly uploaded ones
-      const allImages = [...existingImages, ...newImageDataUrls];
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadForm,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error('Failed to upload images');
+        }
+
+        const uploadData = await uploadRes.json();
+        newImageUrls = uploadData.urls;
+      }
+
+      // Existing images are already URLs (Blob) or base64 (legacy) — keep as-is
+      const allImages = [...existingImages, ...newImageUrls];
 
       // Strip commas from numeric strings before parsing
       const num = (val: string, fallback = 0) => parseInt(val.replace(/,/g, '')) || fallback;
