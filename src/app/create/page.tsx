@@ -52,7 +52,7 @@ const INITIAL_FORM_DATA: ListingFormData = {
   avionics: [],
   logsComplete: true,
   annualCurrent: true,
-  annualDate: new Date().toISOString().split('T')[0],
+  annualDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
   city: '',
   state: '',
   zipCode: '',
@@ -95,7 +95,16 @@ function CreateListingForm() {
   const editId = searchParams.get('edit');
   const isEditMode = !!editId;
 
-  const [formData, setFormData] = useState<ListingFormData>(INITIAL_FORM_DATA);
+  const [formData, setFormData] = useState<ListingFormData>(() => {
+    // Restore draft from sessionStorage if not in edit mode
+    if (!isEditMode && typeof window !== 'undefined') {
+      try {
+        const saved = sessionStorage.getItem('lbf_listing_draft');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return INITIAL_FORM_DATA;
+  });
   const [images, setImages] = useState<{file: File, preview: string}[]>([]);
   // Track existing images from DB separately (base64 strings, no File object)
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -108,6 +117,14 @@ function CreateListingForm() {
   const [originalStatus, setOriginalStatus] = useState<string>('active');
   const [promoCode, setPromoCode] = useState('');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // Persist form data to sessionStorage as user types (not in edit mode)
+  useEffect(() => {
+    if (isEditMode) return;
+    try {
+      sessionStorage.setItem('lbf_listing_draft', JSON.stringify(formData));
+    } catch {}
+  }, [formData, isEditMode]);
 
   // Fetch existing listing data when in edit mode
   useEffect(() => {
@@ -380,6 +397,7 @@ function CreateListingForm() {
         }
 
         setSubmitSuccess(true);
+        try { sessionStorage.removeItem('lbf_listing_draft'); } catch {}
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 2000);
@@ -414,6 +432,7 @@ function CreateListingForm() {
 
           const { url } = await stripeRes.json();
           if (url) {
+            try { sessionStorage.removeItem('lbf_listing_draft'); } catch {}
             window.location.href = url;
             return;
           }
@@ -425,6 +444,8 @@ function CreateListingForm() {
         setImages([]);
         setExistingImages([]);
         setAvionicsInput('');
+        // Clear the saved draft
+        try { sessionStorage.removeItem('lbf_listing_draft'); } catch {}
 
         setTimeout(() => {
           window.location.href = '/';
@@ -880,10 +901,10 @@ function CreateListingForm() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Last Annual Date
+                  Last Annual
                 </label>
                 <input
-                  type="date"
+                  type="month"
                   name="annualDate"
                   value={formData.annualDate}
                   onChange={handleInputChange}
