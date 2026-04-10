@@ -1,35 +1,37 @@
-import { put } from '@vercel/blob';
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Allow up to 60s for large multi-image uploads
 
+// This route handles the client upload token handshake for Vercel Blob.
+// Images go directly from the browser to Blob storage — they never pass
+// through this serverless function, so there's no payload size limit.
 export async function POST(request: NextRequest) {
+  const body = (await request.json()) as HandleUploadBody;
+
   try {
-    const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
-
-    if (!files || files.length === 0) {
-      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
-    }
-
-    // Upload each file to Vercel Blob in parallel
-    const uploadPromises = files.map(async (file) => {
-      const blob = await put(`listings/${Date.now()}-${file.name}`, file, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
-      return blob.url;
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => {
+        // Authorize the upload — add auth checks here if needed
+        return {
+          allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+          maximumSizeInBytes: 10 * 1024 * 1024, // 10MB per image
+          tokenPayload: JSON.stringify({}),
+        };
+      },
+      onUploadCompleted: async ({ blob }) => {
+        console.log('Image uploaded to Blob:', blob.url);
+      },
     });
 
-    const urls = await Promise.all(uploadPromises);
-
-    return NextResponse.json({ urls }, { status: 200 });
+    return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error('Error uploading images:', error);
+    console.error('Error handling upload:', error);
     return NextResponse.json(
-      { error: 'Failed to upload images' },
-      { status: 500 }
+      { error: (error as Error).message },
+      { status: 400 }
     );
   }
 }

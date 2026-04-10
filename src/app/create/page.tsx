@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { upload } from '@vercel/blob/client';
 
 interface ListingFormData {
   year: string;
@@ -303,24 +304,24 @@ function CreateListingForm() {
     setIsSubmitting(true);
 
     try {
-      // Upload new images to Vercel Blob (full quality, no base64 in payload)
+      // Upload new images directly to Vercel Blob from the browser.
+      // Images go straight to Blob storage — never through the serverless
+      // function — so there's no payload size limit.
       let newImageUrls: string[] = [];
       if (images.length > 0) {
-        const uploadForm = new FormData();
-        images.forEach((img) => uploadForm.append('files', img.file));
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadForm,
+        const uploadPromises = images.map(async (img) => {
+          const blob = await upload(
+            `listings/${Date.now()}-${img.file.name}`,
+            img.file,
+            {
+              access: 'public',
+              handleUploadUrl: '/api/upload',
+            }
+          );
+          return blob.url;
         });
 
-        if (!uploadRes.ok) {
-          const errText = await uploadRes.text().catch(() => 'Unknown upload error');
-          throw new Error(`Failed to upload images: ${errText}`);
-        }
-
-        const uploadData = await uploadRes.json();
-        newImageUrls = uploadData.urls;
+        newImageUrls = await Promise.all(uploadPromises);
       }
 
       // Migrate any legacy base64 existing images to Blob
@@ -335,29 +336,26 @@ function CreateListingForm() {
       }
 
       if (base64Images.length > 0) {
-        // Convert base64 strings to File objects and upload to Blob
-        const blobs = await Promise.all(
-          base64Images.map(async (dataUrl, i) => {
-            const res = await fetch(dataUrl);
-            const blob = await res.blob();
-            return new File([blob], `existing-${i}.jpg`, { type: blob.type || 'image/jpeg' });
-          })
-        );
-
-        const migrateForm = new FormData();
-        blobs.forEach((file) => migrateForm.append('files', file));
-
-        const migrateRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: migrateForm,
+        const migratePromises = base64Images.map(async (dataUrl, i) => {
+          const res = await fetch(dataUrl);
+          const blobData = await res.blob();
+          const file = new File([blobData], `existing-${i}.jpg`, { type: blobData.type || 'image/jpeg' });
+          const blob = await upload(
+            `listings/migrated-${Date.now()}-${i}.jpg`,
+            file,
+            {
+              access: 'public',
+              handleUploadUrl: '/api/upload',
+            }
+          );
+          return blob.url;
         });
 
-        if (migrateRes.ok) {
-          const migrateData = await migrateRes.json();
-          migratedExisting.push(...migrateData.urls);
-        } else {
-          // If migration fails, skip those images rather than blocking the save
-          console.warn('Failed to migrate base64 images to Blob');
+        try {
+          const migratedUrls = await Promise.all(migratePromises);
+          migratedExisting.push(...migratedUrls);
+        } catch (err) {
+          console.warn('Failed to migrate some base64 images to Blob:', err);
         }
       }
 
