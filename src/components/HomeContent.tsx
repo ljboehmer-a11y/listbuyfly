@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { Search, X, SlidersHorizontal, Heart, ChevronDown, ChevronUp, MapPin, ArrowUpDown, ArrowUp } from 'lucide-react';
 import { Listing, Filters } from '@/lib/types';
 import ImageCarousel from './ImageCarousel';
@@ -463,6 +464,10 @@ export default function HomeContent({ listings }: HomeContentProps) {
             </div>
           </a>
           <nav className="flex items-center gap-1.5 sm:gap-3">
+            <a href="/guides" className="hidden sm:flex items-center gap-2 text-slate-300 hover:text-white px-3 py-2 transition-colors text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C6.5 6.253 3 9.753 3 15.5m0 0h18m-18 0c0 5.747 3.5 9.247 9 9.247m9-9.247c0 5.747-3.5 9.247-9 9.247" /></svg>
+              Guides
+            </a>
             <CompareButton />
             <Show when="signed-in">
               <a href="/dashboard" className="hidden sm:flex items-center gap-2 text-slate-300 hover:text-white px-3 py-2 transition-colors text-sm">
@@ -1015,9 +1020,10 @@ export default function HomeContent({ listings }: HomeContentProps) {
               const isCompared = compareList.includes(listing.id);
 
               return (
-                <a
+                <Link
                   key={listing.id}
                   href={`/listing/${listing.id}`}
+                  prefetch={index < 6}
                   onClick={() => {
                     // Snapshot scroll position right before navigating to listing
                     const state = {
@@ -1079,7 +1085,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                       <span className="block text-center mt-3 bg-slate-900 text-white py-2 rounded-lg font-semibold hover:bg-slate-800 transition-colors">View Details</span>
                     </div>
                   </div>
-                </a>
+                </Link>
               );
             })}
           </div>

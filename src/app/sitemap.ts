@@ -1,32 +1,35 @@
 import { MetadataRoute } from 'next';
-import { listings } from '@/data/listings';
+import { getAllListings } from '@/lib/db';
+import { listings as seedListings } from '@/data/listings';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://listbuyfly.com';
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  let listings;
 
-  // Home page
-  const pages: MetadataRoute.Sitemap = [
+  try {
+    listings = await getAllListings();
+  } catch {
+    listings = seedListings;
+  }
+
+  if (listings.length === 0) {
+    listings = seedListings;
+  }
+
+  const listingRoutes = listings.map((listing) => ({
+    url: `https://listbuyfly.com/listing/${listing.id}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
+  const staticRoutes = [
     {
-      url: baseUrl,
+      url: 'https://listbuyfly.com',
       lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/create`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
+      changeFrequency: 'daily' as const,
+      priority: 1.0,
     },
   ];
 
-  // Individual listing pages
-  const listingPages = listings.map((listing) => ({
-    url: `${baseUrl}/listing/${listing.id}`,
-    lastModified: new Date(listing.listedDate),
-    changeFrequency: 'weekly' as const,
-    priority: 0.9,
-  }));
-
-  return [...pages, ...listingPages];
+  return [...staticRoutes, ...listingRoutes];
 }
