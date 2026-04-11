@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { getAllGuides } from '@/lib/guides';
 import { Calendar, Tag, ArrowRight } from 'lucide-react';
 
+// ISR: revalidate every 5 minutes to pick up Notion changes
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Buyer's Guides | List Buy Fly",
   description: 'Expert guides for aircraft buyers, covering first-time purchases, aircraft comparisons, pre-buy inspections, and more.',

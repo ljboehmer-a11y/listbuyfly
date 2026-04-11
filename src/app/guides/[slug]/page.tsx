@@ -1,20 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getGuideBySlug, getGuideSlugs } from '@/lib/guides';
+import { getGuideBySlug } from '@/lib/guides';
 import { notFound } from 'next/navigation';
 import { Calendar, User, Tag, ArrowLeft } from 'lucide-react';
+
+// ISR: revalidate every 5 minutes to pick up Notion changes
+export const revalidate = 300;
 
 interface GuidePageProps {
   params: Promise<{
     slug: string;
   }>;
-}
-
-export async function generateStaticParams() {
-  const slugs = await getGuideSlugs();
-  return slugs.map((slug) => ({
-    slug,
-  }));
 }
 
 export async function generateMetadata(props: GuidePageProps): Promise<Metadata> {
