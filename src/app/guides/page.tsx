@@ -54,14 +54,18 @@ export default async function GuidesPage() {
                 className="group h-full"
               >
                 <article className="h-full flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-amber-400 transition-all duration-300">
-                  {/* Featured Image */}
-                  {guide.featuredImage && (
+                  {/* Featured Image - only show if URL is valid (http/https) */}
+                  {guide.featuredImage && /^https?:\/\//.test(guide.featuredImage) ? (
                     <div className="relative w-full h-48 bg-gradient-to-br from-amber-100 to-slate-100 overflow-hidden">
                       <img
                         src={guide.featuredImage}
                         alt={guide.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                    </div>
+                  ) : (
+                    <div className="relative w-full h-48 bg-gradient-to-br from-amber-100 via-amber-50 to-slate-100 overflow-hidden flex items-center justify-center">
+                      <span className="text-amber-700/40 text-5xl font-bold">✈</span>
                     </div>
                   )}
 

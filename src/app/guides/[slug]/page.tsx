@@ -119,8 +119,8 @@ export default async function GuidePage(props: GuidePageProps) {
           </div>
         </div>
 
-        {/* Hero Section */}
-        {guide.featuredImage && (
+        {/* Hero Section - only show if image URL is valid (http/https) */}
+        {guide.featuredImage && /^https?:\/\//.test(guide.featuredImage) && (
           <div className="relative w-full h-96 bg-gradient-to-br from-amber-100 to-slate-100 overflow-hidden">
             <img
               src={guide.featuredImage}
@@ -171,29 +171,35 @@ export default async function GuidePage(props: GuidePageProps) {
           </header>
 
           {/* Main Content */}
-          <div className="prose prose-lg max-w-none mb-12">
-            <div
-              className="
-                prose prose-slate max-w-none
-                prose-headings:text-slate-900 prose-headings:font-bold
-                prose-h1:text-3xl prose-h1:mt-8 prose-h1:mb-4
-                prose-h2:text-2xl prose-h2:mt-6 prose-h2:mb-3
-                prose-h3:text-xl prose-h3:mt-5 prose-h3:mb-2
-                prose-p:text-slate-700 prose-p:leading-relaxed
-                prose-a:text-amber-600 prose-a:underline hover:prose-a:text-amber-700
-                prose-strong:text-slate-900 prose-strong:font-semibold
-                prose-ul:list-disc prose-ul:pl-6 prose-ul:my-4
-                prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-4
-                prose-li:text-slate-700 prose-li:my-1
-                prose-code:bg-slate-100 prose-code:text-slate-900 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
-                prose-blockquote:border-l-4 prose-blockquote:border-amber-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-slate-700
-                prose-hr:border-slate-200 prose-hr:my-8
-              "
-              dangerouslySetInnerHTML={{
-                __html: guide.htmlContent,
-              }}
-            />
-          </div>
+          <style>{`
+            .guide-content h1 { font-size: 2rem; font-weight: 700; color: #0f172a; margin: 2rem 0 1rem; line-height: 1.2; }
+            .guide-content h2 { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 2rem 0 1rem; line-height: 1.25; }
+            .guide-content h3 { font-size: 1.375rem; font-weight: 600; color: #0f172a; margin: 1.75rem 0 0.75rem; line-height: 1.3; }
+            .guide-content h4 { font-size: 1.15rem; font-weight: 600; color: #0f172a; margin: 1.5rem 0 0.5rem; }
+            .guide-content p { color: #334155; line-height: 1.75; margin: 0 0 1.25rem; font-size: 1.0625rem; }
+            .guide-content ul { list-style: disc; padding-left: 1.5rem; margin: 1rem 0 1.5rem; color: #334155; }
+            .guide-content ol { list-style: decimal; padding-left: 1.5rem; margin: 1rem 0 1.5rem; color: #334155; }
+            .guide-content li { margin: 0.5rem 0; line-height: 1.7; }
+            .guide-content li > p { margin: 0.25rem 0; }
+            .guide-content strong { color: #0f172a; font-weight: 600; }
+            .guide-content em { font-style: italic; }
+            .guide-content a { color: #d97706; text-decoration: underline; }
+            .guide-content a:hover { color: #b45309; }
+            .guide-content code { background: #f1f5f9; color: #0f172a; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.9em; font-family: ui-monospace, monospace; }
+            .guide-content pre { background: #0f172a; color: #f1f5f9; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1.25rem 0; }
+            .guide-content pre code { background: transparent; color: inherit; padding: 0; }
+            .guide-content blockquote { border-left: 4px solid #f59e0b; padding-left: 1rem; font-style: italic; color: #475569; margin: 1.25rem 0; }
+            .guide-content hr { border: 0; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
+            .guide-content img { max-width: 100%; border-radius: 0.5rem; margin: 1.5rem 0; }
+            .guide-content input[type="checkbox"] { margin-right: 0.5rem; }
+          `}</style>
+          <div
+            className="guide-content max-w-none mb-12"
+            dangerouslySetInnerHTML={{
+              __html: guide.htmlContent,
+            }}
+          />
+
 
           {/* Tags */}
           {guide.tags.length > 0 && (

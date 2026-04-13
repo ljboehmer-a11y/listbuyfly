@@ -177,7 +177,20 @@ function parseNotionPage(page: any): Omit<Guide, 'content' | 'htmlContent'> {
   const description = richTextToPlain(props.Description?.rich_text || []);
   const category = props.Category?.select?.name || '';
   const date = props.Date?.date?.start || '';
-  const featuredImage = props['Featured Image']?.url || undefined;
+
+  // Prefer Notion's built-in page cover (easiest to add: hover top of page → "Add cover")
+  // Fall back to the Featured Image URL property if set
+  let featuredImage: string | undefined;
+  if (page.cover) {
+    if (page.cover.type === 'external') {
+      featuredImage = page.cover.external?.url;
+    } else if (page.cover.type === 'file') {
+      featuredImage = page.cover.file?.url;
+    }
+  }
+  if (!featuredImage && props['Featured Image']?.url) {
+    featuredImage = props['Featured Image'].url;
+  }
 
   // Tags come as multi_select
   const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
