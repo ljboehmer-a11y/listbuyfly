@@ -119,7 +119,7 @@ export default function ListingDetailClient({ listingId }: ListingDetailClientPr
               {listing.city}, {listing.state}
             </span>
             <span className="text-2xl font-bold text-amber-500">
-              ${listing.price.toLocaleString()}
+              {listing.price && listing.price > 0 ? `$${listing.price.toLocaleString()}` : 'Call/Email for Price'}
             </span>
           </div>
         </div>
@@ -262,29 +262,30 @@ export default function ListingDetailClient({ listingId }: ListingDetailClientPr
                   </div>
                 </div>
 
-                <div
-                  className={`flex items-center gap-3 p-4 rounded-lg border ${
-                    !listing.damageHistory
-                      ? 'bg-emerald-50 border-emerald-200'
-                      : 'bg-yellow-50 border-yellow-200'
-                  }`}
-                >
-                  {!listing.damageHistory ? (
+                {!listing.damageHistory ? (
+                  <div className="flex items-center gap-3 p-4 rounded-lg border bg-emerald-50 border-emerald-200">
                     <CheckCircle className="w-6 h-6 text-emerald-600 flex-shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
-                  )}
-                  <div>
-                    <p className="font-semibold text-slate-900">
-                      Damage History: {!listing.damageHistory ? 'Clean' : 'Yes'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {!listing.damageHistory
-                        ? 'No accident or damage history'
-                        : 'This aircraft has a damage history'}
-                    </p>
+                    <div>
+                      <p className="font-semibold text-slate-900">Damage History: Clean</p>
+                      <p className="text-sm text-gray-600">No accident or damage history</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-3 p-4 rounded-lg border bg-slate-50 border-slate-200">
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900 mb-1">Damage History — Disclosed</p>
+                      {listing.damageContext ? (
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {listing.damageContext}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-600">
+                          Seller has disclosed damage history. Contact for full details.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 

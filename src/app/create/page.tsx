@@ -32,14 +32,16 @@ interface ListingFormData {
   usefulLoad: string;
   fuelCapacity: string;
   damageHistory: boolean;
+  damageContext: string;
   sellerName: string;
   sellerPhone: string;
   sellerEmail: string;
   tier: 'free' | 'paid';
+  termsAccepted: boolean;
 }
 
 const INITIAL_FORM_DATA: ListingFormData = {
-  year: new Date().getFullYear().toString(),
+  year: '',
   make: '',
   model: '',
   nNumber: '',
@@ -63,10 +65,12 @@ const INITIAL_FORM_DATA: ListingFormData = {
   usefulLoad: '',
   fuelCapacity: '',
   damageHistory: false,
+  damageContext: '',
   sellerName: '',
   sellerPhone: '',
   sellerEmail: '',
   tier: 'free',
+  termsAccepted: true,
 };
 
 const STATES = [
@@ -162,10 +166,12 @@ function CreateListingForm() {
           usefulLoad: String(listing.usefulLoad || ''),
           fuelCapacity: String(listing.fuelCapacity || ''),
           damageHistory: listing.damageHistory ?? false,
+          damageContext: listing.damageContext || '',
           sellerName: listing.sellerName || '',
           sellerPhone: listing.sellerPhone || '',
           sellerEmail: listing.sellerEmail || '',
           tier: listing.tier || 'free',
+          termsAccepted: true,
         });
 
         // Remember the original tier and status to detect upgrades/downgrades
@@ -685,16 +691,17 @@ function CreateListingForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Price ($)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Price ($) <span className="text-slate-400 font-normal">(optional — leave blank for &quot;Call/Email for Price&quot;)</span>
+                </label>
                 <input
                   type="text"
                   inputMode="numeric"
                   name="price"
                   value={formData.price}
                   onChange={handleInputChange}
-                  placeholder="e.g., 89900"
+                  placeholder="Leave blank for Call/Email for Price"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
                 />
               </div>
 
@@ -970,6 +977,23 @@ function CreateListingForm() {
               </div>
             </div>
 
+            {formData.damageHistory && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Damage History Context
+                  <span className="text-slate-500 font-normal"> (shown on the listing page so buyers have full context)</span>
+                </label>
+                <textarea
+                  name="damageContext"
+                  value={formData.damageContext}
+                  onChange={handleInputChange}
+                  rows={4}
+                  placeholder="Brief description: when, what happened, repairs performed, documentation available, current condition, etc."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            )}
+
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">Avionics</label>
               <div className="flex gap-2 mb-3">
@@ -1118,7 +1142,12 @@ function CreateListingForm() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Name</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Name / Company Name
+                  <span className="block text-xs text-slate-500 font-normal mt-0.5">
+                    Displayed on the listing page for premium listings only.
+                  </span>
+                </label>
                 <input
                   type="text"
                   name="sellerName"
@@ -1157,6 +1186,32 @@ function CreateListingForm() {
             </div>
           </section>
 
+          {/* Terms Acceptance */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="termsAccepted"
+                checked={formData.termsAccepted}
+                onChange={handleInputChange}
+                className="w-5 h-5 mt-0.5 accent-amber-500 flex-shrink-0"
+                required
+              />
+              <span className="text-sm text-slate-700">
+                I have read and agree to the{' '}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-600 hover:text-amber-700 font-semibold underline"
+                >
+                  Terms &amp; Conditions
+                </Link>
+                . I confirm that the information in this listing is accurate to the best of my knowledge.
+              </span>
+            </label>
+          </div>
+
           {/* Submit Button */}
           <div className="flex gap-4">
             <Link
@@ -1167,8 +1222,8 @@ function CreateListingForm() {
             </Link>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-slate-900 font-semibold rounded-lg transition-colors"
+              disabled={isSubmitting || !formData.termsAccepted}
+              className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-lg transition-colors"
             >
               {isSubmitting
                 ? (isEditMode ? 'Updating...' : 'Creating...')

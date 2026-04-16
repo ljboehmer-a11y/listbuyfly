@@ -25,6 +25,7 @@ export interface Listing {
   usefulLoad: number
   fuelCapacity: number
   damageHistory: boolean
+  damageContext?: string
   images: string[]
   sellerName: string
   sellerPhone: string

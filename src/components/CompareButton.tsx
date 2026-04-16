@@ -140,7 +140,7 @@ export default function CompareButton() {
                   </thead>
                   <tbody>
                     {[
-                      { label: 'Price', render: (l: Listing) => <span className="text-xl font-bold text-amber-500">${l.price.toLocaleString()}</span>, bg: true },
+                      { label: 'Price', render: (l: Listing) => <span className="text-xl font-bold text-amber-500">{l.price && l.price > 0 ? `$${l.price.toLocaleString()}` : 'Call/Email for Price'}</span>, bg: true },
                       { label: 'Year', render: (l: Listing) => <span>{l.year}</span> },
                       { label: 'TTAF', render: (l: Listing) => { const low = Math.min(...listings.map(c => c.ttaf)); return <span className={l.ttaf === low ? 'text-emerald-600 font-bold' : ''}>{l.ttaf.toLocaleString()} hrs{l.ttaf === low ? ' ★' : ''}</span>; }, bg: true },
                       { label: 'SMOH', render: (l: Listing) => { const low = Math.min(...listings.map(c => c.smoh)); return <span className={l.smoh === low ? 'text-emerald-600 font-bold' : ''}>{l.smoh.toLocaleString()} hrs{l.smoh === low ? ' ★' : ''}</span>; } },

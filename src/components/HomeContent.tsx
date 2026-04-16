@@ -379,9 +379,19 @@ export default function HomeContent({ listings }: HomeContentProps) {
     if (sortBy === 'newest') {
       results.sort((a, b) => new Date(b.listedDate).getTime() - new Date(a.listedDate).getTime());
     } else if (sortBy === 'priceAsc') {
-      results.sort((a, b) => a.price - b.price);
+      // Listings without a price (Call/Email) sort to the end
+      results.sort((a, b) => {
+        const ap = a.price && a.price > 0 ? a.price : Infinity;
+        const bp = b.price && b.price > 0 ? b.price : Infinity;
+        return ap - bp;
+      });
     } else if (sortBy === 'priceDesc') {
-      results.sort((a, b) => b.price - a.price);
+      // Listings without a price (Call/Email) sort to the end
+      results.sort((a, b) => {
+        const ap = a.price && a.price > 0 ? a.price : -1;
+        const bp = b.price && b.price > 0 ? b.price : -1;
+        return bp - ap;
+      });
     } else if (sortBy === 'lowSmoh') {
       results.sort((a, b) => a.smoh - b.smoh);
     } else if (sortBy === 'lowTtaf') {
@@ -640,7 +650,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-slate-900 truncate">{l.year} {l.make} {l.model}</p>
-                          <p className="text-sm text-slate-500">${l.price.toLocaleString()}</p>
+                          <p className="text-sm text-slate-500">{l.price && l.price > 0 ? `$${l.price.toLocaleString()}` : 'Call/Email'}</p>
                         </div>
                       </a>
                     ))}
@@ -1063,7 +1073,11 @@ export default function HomeContent({ listings }: HomeContentProps) {
                     </h3>
                     <p className="text-sm text-gray-600 mb-3">{listing.nNumber}</p>
                     <div className="mb-4">
-                      <p className="text-xl sm:text-2xl font-bold text-amber-500">${listing.price.toLocaleString()}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-amber-500">
+                        {listing.price && listing.price > 0
+                          ? `$${listing.price.toLocaleString()}`
+                          : 'Call/Email for Price'}
+                      </p>
                     </div>
                     <div className="space-y-2 mb-4 text-sm">
                       <div className="flex justify-between"><span className="text-gray-600">TTAF:</span><span className="font-semibold text-slate-900">{listing.ttaf.toLocaleString()}</span></div>
@@ -1150,7 +1164,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                 </thead>
                 <tbody>
                   {[
-                    { label: 'Price', render: (l: Listing) => <span className="text-xl font-bold text-amber-500">${l.price.toLocaleString()}</span>, bg: true },
+                    { label: 'Price', render: (l: Listing) => <span className="text-xl font-bold text-amber-500">{l.price && l.price > 0 ? `$${l.price.toLocaleString()}` : 'Call/Email for Price'}</span>, bg: true },
                     { label: 'Year', render: (l: Listing) => <span>{l.year}</span> },
                     { label: 'TTAF', render: (l: Listing) => { const low = Math.min(...compareListings.map(c => c.ttaf)); return <span className={l.ttaf === low ? 'text-emerald-600 font-bold' : ''}>{l.ttaf.toLocaleString()} hrs{l.ttaf === low ? ' ★' : ''}</span>; }, bg: true },
                     { label: 'SMOH', render: (l: Listing) => { const low = Math.min(...compareListings.map(c => c.smoh)); return <span className={l.smoh === low ? 'text-emerald-600 font-bold' : ''}>{l.smoh.toLocaleString()} hrs{l.smoh === low ? ' ★' : ''}</span>; } },

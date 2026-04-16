@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       usefulLoad,
       fuelCapacity,
       damageHistory,
+      damageContext,
       images,
       sellerName,
       sellerPhone,
@@ -51,12 +52,11 @@ export async function POST(request: NextRequest) {
       promoCode,
     } = body;
 
-    // Validate required fields
+    // Validate required fields (price is optional — Call/Email for Price)
     if (
       !make ||
       !model ||
       !year ||
-      !price ||
       !engine ||
       !city ||
       !state ||
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       make,
       model,
       year,
-      price,
+      price: price || 0,
       ttaf: ttaf || 0,
       smoh: smoh || 0,
       tbo: tbo || 0,
@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
       usefulLoad: usefulLoad || 0,
       fuelCapacity: fuelCapacity || 0,
       damageHistory: damageHistory ?? false,
+      damageContext: damageContext || '',
       images: images || [],
       sellerName,
       sellerPhone,

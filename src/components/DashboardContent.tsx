@@ -235,7 +235,7 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                         <div className="text-sm text-slate-500">{listing.nNumber}</div>
                       </td>
                       <td className="px-6 py-4 text-slate-900 font-medium">
-                        ${listing.price.toLocaleString()}
+                        {listing.price && listing.price > 0 ? `$${listing.price.toLocaleString()}` : 'Call/Email'}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         {listing.city}, {listing.state}
@@ -335,7 +335,7 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                         </div>
                         <div className="text-sm text-slate-500 mt-1">{listing.nNumber}</div>
                         <div className="text-sm text-slate-600 mt-2">
-                          ${listing.price.toLocaleString()}
+                          {listing.price && listing.price > 0 ? `$${listing.price.toLocaleString()}` : 'Call/Email'}
                         </div>
                         <div className="text-sm text-slate-600 mt-1">
                           {listing.city}, {listing.state}
