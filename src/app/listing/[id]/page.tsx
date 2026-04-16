@@ -39,20 +39,34 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     return {
       title: 'Aircraft Not Found',
       description: 'This aircraft listing could not be found.',
+      robots: { index: false, follow: false },
     };
   }
 
-  const title = `${listing.year} ${listing.make} ${listing.model} ${listing.nNumber} - $${listing.price.toLocaleString()} | List Buy Fly`;
-  const description = `${listing.year} ${listing.make} ${listing.model} for sale. ${listing.description}. TTAF: ${listing.ttaf}, SMOH: ${listing.smoh}.`;
+  // Block indexing for non-active listings (pending_payment, sold, inactive)
+  const isActive = listing.status === 'active';
+
+  const priceStr = listing.price && listing.price > 0
+    ? `$${listing.price.toLocaleString()}`
+    : 'Call for Price';
+  const title = `${listing.year} ${listing.make} ${listing.model} ${listing.nNumber} - ${priceStr} | List Buy Fly`;
+  const description = `${listing.year} ${listing.make} ${listing.model} for sale. ${listing.description ? listing.description.slice(0, 150) : ''} TTAF: ${listing.ttaf}, SMOH: ${listing.smoh}.`;
+  const canonicalUrl = `https://listbuyfly.com/listing/${listing.id}`;
 
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: isActive
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
     openGraph: {
       title,
       description,
       type: 'website',
-      url: `https://listbuyfly.com/listing/${listing.id}`,
+      url: canonicalUrl,
       images: [
         {
           url: 'https://listbuyfly.com/og-aircraft.png',

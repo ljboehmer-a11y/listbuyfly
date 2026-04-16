@@ -9,6 +9,9 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Buyer's Guides | List Buy Fly",
   description: 'Expert guides for aircraft buyers, covering first-time purchases, aircraft comparisons, pre-buy inspections, and more.',
+  alternates: {
+    canonical: 'https://listbuyfly.com/guides',
+  },
   openGraph: {
     title: "Buyer's Guides | List Buy Fly",
     description: 'Expert guides for aircraft buyers from List Buy Fly.',

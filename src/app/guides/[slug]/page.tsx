@@ -28,6 +28,9 @@ export async function generateMetadata(props: GuidePageProps): Promise<Metadata>
   return {
     title: `${guide.title} | List Buy Fly`,
     description: guide.description,
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
       title: guide.title,
       description: guide.description,
