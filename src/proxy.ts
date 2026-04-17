@@ -41,14 +41,6 @@ export default function proxy(req: NextRequest, event: NextFetchEvent) {
     return new NextResponse(null, { status: 404 });
   }
 
-  // Canonical host redirect: www → non-www (301)
-  const host = req.headers.get('host') || '';
-  if (host.startsWith('www.')) {
-    const url = req.nextUrl.clone();
-    url.host = host.replace(/^www\./, '');
-    return NextResponse.redirect(url, 301);
-  }
-
   return clerk(req, event);
 }
 

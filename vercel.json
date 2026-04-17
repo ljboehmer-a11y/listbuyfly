@@ -1,17 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/:path(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.listbuyfly.com"
-        }
-      ],
-      "destination": "https://listbuyfly.com/:path",
-      "permanent": true
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
