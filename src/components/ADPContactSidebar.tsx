@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState, useEffect, useCallback } from 'react';
-import { Lock, CheckCircle, Loader, X } from 'lucide-react';
+import { Lock, CheckCircle, Loader, X, Eye } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -48,6 +48,11 @@ export default function ADPContactSidebar({
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  // Click-to-reveal: hide seller phone/email behind a button until a real
+  // user clicks. Thwarts passive scrapers and email-address harvesters that
+  // grab the rendered HTML without running JS or simulating interaction.
+  // Actual values are in React state (not in the DOM) until revealed.
+  const [contactRevealed, setContactRevealed] = useState(false);
 
   // Load sticky buyer info from cookies on mount
   useEffect(() => {
@@ -270,18 +275,34 @@ export default function ADPContactSidebar({
                 <p className="text-sm text-gray-600 mb-1">Seller Name</p>
                 <p className="font-semibold text-slate-900">{sellerName}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Phone</p>
-                <a href={`tel:${sellerPhone}`} className="font-semibold text-amber-500 hover:text-amber-600">
-                  {sellerPhone}
-                </a>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Email</p>
-                <a href={`mailto:${sellerEmail}`} className="font-semibold text-amber-500 hover:text-amber-600 break-all">
-                  {sellerEmail}
-                </a>
-              </div>
+              {contactRevealed ? (
+                <>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Phone</p>
+                    <a href={`tel:${sellerPhone}`} className="font-semibold text-amber-500 hover:text-amber-600">
+                      {sellerPhone}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Email</p>
+                    <a href={`mailto:${sellerEmail}`} className="font-semibold text-amber-500 hover:text-amber-600 break-all">
+                      {sellerEmail}
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setContactRevealed(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold py-3 rounded-lg transition-colors border border-slate-200"
+                    aria-label="Reveal seller phone and email"
+                  >
+                    <Eye className="w-5 h-5" />
+                    Click to reveal phone &amp; email
+                  </button>
+                </div>
+              )}
             </div>
 
             <button

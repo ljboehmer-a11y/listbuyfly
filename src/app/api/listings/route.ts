@@ -12,6 +12,20 @@ import {
 import { enforceListingRateLimit } from '@/lib/ratelimit';
 import { requireSameOrigin } from '@/lib/originCheck';
 
+/**
+ * Remove seller PII (phone, email, userId) from a listing before returning
+ * it over the public JSON API. Stops scrapers from harvesting every seller's
+ * contact info with a single unauthenticated GET. The listing detail page
+ * itself still renders contact info behind a "Click to reveal" button for
+ * real users on paid listings.
+ */
+function stripSellerPii<T extends { sellerEmail?: string; sellerPhone?: string; userId?: string }>(
+  listing: T
+): T {
+  const { sellerEmail: _e, sellerPhone: _p, userId: _u, ...rest } = listing as any;
+  return rest as T;
+}
+
 // Increase body size limit to handle base64 images (default is 1MB)
 export const maxDuration = 30; // seconds
 export const dynamic = 'force-dynamic';
@@ -183,7 +197,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // If an ID is provided, return a single listing
+    // Resolve the caller's identity once so we can decide whether to return
+    // PII on single-listing lookups. List responses always strip PII — no
+    // legitimate client needs every seller's phone number in one payload.
+    const { userId: callerId } = await auth();
+
+    // If an ID is provided, return a single listing.
+    // Owners get the full record (they need their own contact info in the
+    // dashboard edit flow). Everyone else gets a stripped copy.
     if (id) {
       const listing = await getListingById(id);
       if (!listing) {
@@ -192,12 +213,20 @@ export async function GET(request: NextRequest) {
           { status: 404 }
         );
       }
-      return NextResponse.json(listing, { status: 200 });
+      const isOwner =
+        callerId !== null &&
+        callerId !== undefined &&
+        (listing as any).userId === callerId;
+      const payload = isOwner ? listing : stripSellerPii(listing);
+      return NextResponse.json(payload, { status: 200 });
     }
 
-    // Otherwise return all active listings
+    // List response: always strip PII. Individual listing detail pages
+    // render contact info server-side from getListingById() directly, so
+    // this doesn't affect the click-to-reveal UX on paid listings.
     const listings = await getAllListings();
-    return NextResponse.json(listings, { status: 200 });
+    const sanitized = listings.map(stripSellerPii);
+    return NextResponse.json(sanitized, { status: 200 });
   } catch (error) {
     console.error('Error fetching listings:', error);
     return NextResponse.json(

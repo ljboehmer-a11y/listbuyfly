@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getGuideBySlug } from '@/lib/guides';
 import { notFound } from 'next/navigation';
 import { Calendar, User, Tag, ArrowLeft } from 'lucide-react';
+import DOMPurify from 'isomorphic-dompurify';
 
 // ISR: revalidate every 5 minutes to pick up Notion changes
 export const revalidate = 300;
@@ -97,6 +98,17 @@ export default async function GuidePage(props: GuidePageProps) {
 
   const wordCount = guide.content.split(/\s+/).length;
   const readingTime = Math.ceil(wordCount / 200); // Assuming 200 words per minute
+
+  // Sanitize the Notion-sourced HTML before dangerouslySetInnerHTML. Notion
+  // is author-trusted today, but an attacker with editor access (or a
+  // compromised Notion account) could inject <script>, onclick handlers, or
+  // javascript: URLs into a guide and execute code on every reader. DOMPurify
+  // strips those while preserving the styling/formatting markup we need.
+  const sanitizedHtml = DOMPurify.sanitize(guide.htmlContent, {
+    USE_PROFILES: { html: true },
+    // Block javascript: / data: URI schemes on links, allow Notion's style spans
+    ADD_ATTR: ['target', 'rel'],
+  });
 
   return (
     <>
@@ -199,7 +211,7 @@ export default async function GuidePage(props: GuidePageProps) {
           <div
             className="guide-content max-w-none mb-12"
             dangerouslySetInnerHTML={{
-              __html: guide.htmlContent,
+              __html: sanitizedHtml,
             }}
           />
 

@@ -70,9 +70,19 @@ export async function GET(request: NextRequest) {
       ALTER TABLE leads ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN DEFAULT false
     `;
 
+    // Indexes on frequently-queried columns. Without these, the homepage
+    // "active listings" query, dashboard "my listings" query, and lead
+    // lookups become full table scans as the DB grows. Creating them up
+    // front is cheap at zero rows; doing it later under load is painful.
+    // IF NOT EXISTS keeps this idempotent so re-running /api/db/setup is safe.
+    await sql`CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_listings_listed_date ON listings(listed_date DESC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_leads_listing_id ON leads(listing_id)`;
+
     return NextResponse.json({
       success: true,
-      message: 'Tables created',
+      message: 'Tables and indexes created',
     });
   } catch (error) {
     console.error('Database setup error:', error);
