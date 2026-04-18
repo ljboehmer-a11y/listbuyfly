@@ -17,6 +17,8 @@
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.3",
     "@vercel/postgres": "^0.10.0",
     "lucide-react": "^1.7.0",
