@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { stripe, STRIPE_PRICE_ID } from '@/lib/stripe';
 import { getListingOwnerId } from '@/lib/db';
+import { requireSameOrigin } from '@/lib/originCheck';
 
 export async function POST(request: NextRequest) {
   try {
+    const originBlock = requireSameOrigin(request);
+    if (originBlock) return originBlock;
+
     // Require an authenticated Clerk session. The authoritative userId comes
     // from Clerk — we never trust a client-supplied userId.
     const { userId: authUserId } = await auth();

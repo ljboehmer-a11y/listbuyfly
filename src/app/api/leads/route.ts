@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createLead, getListingById } from '@/lib/db';
 import { Resend } from 'resend';
+import { enforceLeadRateLimit } from '@/lib/ratelimit';
+import { requireSameOrigin } from '@/lib/originCheck';
 
 // Lazy init — avoids build-time error when env var isn't available
 let _resend: Resend | null = null;
@@ -53,6 +55,14 @@ async function verifyRecaptcha(token: string): Promise<{ success: boolean; score
 
 export async function POST(request: NextRequest) {
   try {
+    // Defense in depth: reject cross-origin form posts before doing any work.
+    const originBlock = requireSameOrigin(request);
+    if (originBlock) return originBlock;
+
+    // Rate limit (5 submits / 10 min / IP). Protects Resend quota + DB.
+    const rateBlock = await enforceLeadRateLimit(request);
+    if (rateBlock) return rateBlock;
+
     const body = await request.json();
     const { buyerName, buyerEmail, buyerPhone, message, listingId, marketingConsent, recaptchaToken } = body;
 

@@ -9,6 +9,8 @@ import {
   updateListing,
   updateListingStatus,
 } from '@/lib/db';
+import { enforceListingRateLimit } from '@/lib/ratelimit';
+import { requireSameOrigin } from '@/lib/originCheck';
 
 // Increase body size limit to handle base64 images (default is 1MB)
 export const maxDuration = 30; // seconds
@@ -41,12 +43,21 @@ async function requireOwner(id: string): Promise<{ userId: string } | NextRespon
 
 export async function POST(request: NextRequest) {
   try {
+    // Defense in depth: reject cross-origin form posts early.
+    const originBlock = requireSameOrigin(request);
+    if (originBlock) return originBlock;
+
     // Require an authenticated Clerk user to create a listing.
     // The client cannot supply its own userId — we use the one from the session.
     const { userId: authUserId } = await auth();
     if (!authUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Rate limit creations per user (10 / hour). Keyed by userId, not IP,
+    // so a dealer on a shared IP doesn't get throttled by a teammate.
+    const rateBlock = await enforceListingRateLimit(authUserId);
+    if (rateBlock) return rateBlock;
 
     const body = await request.json();
     const {
@@ -198,6 +209,9 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const originBlock = requireSameOrigin(request);
+    if (originBlock) return originBlock;
+
     const body = await request.json();
     const { id, status, tierUpgrade, tierDowngrade, promoCode, ...updates } = body;
 
@@ -257,6 +271,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const originBlock = requireSameOrigin(request);
+    if (originBlock) return originBlock;
+
     const body = await request.json();
     const { id, status } = body;
 
