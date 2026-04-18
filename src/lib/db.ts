@@ -56,6 +56,22 @@ export async function getAllListings(): Promise<Listing[]> {
   }
 }
 
+// Fetch only the owner user_id for a listing (cheaper than getListingById when
+// you only need to authorize a write). Returns null if the listing doesn't exist,
+// or undefined if the listing exists but has no owner (legacy seed data).
+export async function getListingOwnerId(id: string): Promise<string | null | undefined> {
+  try {
+    const result = await sql`
+      SELECT user_id FROM listings WHERE id = ${id}
+    `;
+    if (result.rows.length === 0) return null;
+    return result.rows[0].user_id ?? undefined;
+  } catch (error) {
+    console.error('Error getting listing owner:', error);
+    return null;
+  }
+}
+
 // Get a single listing by ID (any status)
 export async function getListingById(id: string): Promise<Listing | null> {
   try {
