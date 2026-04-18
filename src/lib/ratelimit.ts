@@ -21,30 +21,45 @@ const hasUpstash = Boolean(
 
 // Lazy so a broken env var doesn't crash module load.
 let _redis: Redis | null = null;
+let _redisInitFailed = false;
 function getRedis(): Redis | null {
   if (!hasUpstash) return null;
+  if (_redisInitFailed) return null;
   if (!_redis) {
-    _redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
+    try {
+      _redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL!,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      });
+    } catch (err) {
+      console.error('Upstash Redis init failed; rate limiting disabled:', err);
+      _redisInitFailed = true;
+      return null;
+    }
   }
   return _redis;
 }
 
 // Lead form: 5 submissions per 10 minutes per IP. Tight because this sends
 // an email + writes to the DB on every hit, and buyers aren't signed in.
+// Analytics is disabled to keep us on the free Upstash tier with no extra
+// commands-per-request overhead.
 let _leadLimiter: Ratelimit | null = null;
 function getLeadLimiter(): Ratelimit | null {
   const redis = getRedis();
   if (!redis) return null;
   if (!_leadLimiter) {
-    _leadLimiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, '10 m'),
-      analytics: true,
-      prefix: 'rl:lead',
-    });
+    try {
+      _leadLimiter = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, '10 m'),
+        analytics: false,
+        prefix: 'rl:lead',
+      });
+    } catch (err) {
+      console.error('Lead rate limiter init failed:', err);
+      return null;
+    }
   }
   return _leadLimiter;
 }
@@ -56,12 +71,17 @@ function getListingLimiter(): Ratelimit | null {
   const redis = getRedis();
   if (!redis) return null;
   if (!_listingLimiter) {
-    _listingLimiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(10, '1 h'),
-      analytics: true,
-      prefix: 'rl:listing',
-    });
+    try {
+      _listingLimiter = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, '1 h'),
+        analytics: false,
+        prefix: 'rl:listing',
+      });
+    } catch (err) {
+      console.error('Listing rate limiter init failed:', err);
+      return null;
+    }
   }
   return _listingLimiter;
 }
@@ -112,11 +132,19 @@ export async function enforceLeadRateLimit(
   if (!limiter) return null;
 
   const ip = clientIp(request);
-  const { success, reset, limit, remaining } = await limiter.limit(ip);
-  if (success) return null;
-
-  console.warn('Lead rate limit hit', { ip, reset });
-  return tooManyRequests(reset, limit, remaining);
+  // Fail OPEN: if Upstash is slow, unreachable, mis-configured, or throws
+  // for any reason, we log the error and let the request through. A broken
+  // rate limiter must never take down the lead form — email delivery is
+  // the critical path, rate limiting is a nice-to-have.
+  try {
+    const { success, reset, limit, remaining } = await limiter.limit(ip);
+    if (success) return null;
+    console.warn('Lead rate limit hit', { ip, reset });
+    return tooManyRequests(reset, limit, remaining);
+  } catch (err) {
+    console.error('Lead rate limit check failed (failing open):', err);
+    return null;
+  }
 }
 
 /**
@@ -129,9 +157,14 @@ export async function enforceListingRateLimit(
   const limiter = getListingLimiter();
   if (!limiter) return null;
 
-  const { success, reset, limit, remaining } = await limiter.limit(userId);
-  if (success) return null;
-
-  console.warn('Listing rate limit hit', { userId, reset });
-  return tooManyRequests(reset, limit, remaining);
+  // Fail OPEN — see comment on enforceLeadRateLimit.
+  try {
+    const { success, reset, limit, remaining } = await limiter.limit(userId);
+    if (success) return null;
+    console.warn('Listing rate limit hit', { userId, reset });
+    return tooManyRequests(reset, limit, remaining);
+  } catch (err) {
+    console.error('Listing rate limit check failed (failing open):', err);
+    return null;
+  }
 }
