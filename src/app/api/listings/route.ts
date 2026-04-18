@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { Listing } from '@/lib/types';
-import { createListing, getAllListings, getListingById, updateListing, updateListingStatus } from '@/lib/db';
+import {
+  createListing,
+  getAllListings,
+  getListingById,
+  getListingOwnerId,
+  updateListing,
+  updateListingStatus,
+} from '@/lib/db';
 
 // Increase body size limit to handle base64 images (default is 1MB)
 export const maxDuration = 30; // seconds
@@ -13,8 +21,33 @@ function isValidPromoCode(code: string | undefined): boolean {
   return validCodes.includes(code.toUpperCase());
 }
 
+// Ensure the authenticated caller owns the listing before allowing a write.
+// Returns the resolved userId on success, or a NextResponse error to return directly.
+async function requireOwner(id: string): Promise<{ userId: string } | NextResponse> {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const ownerId = await getListingOwnerId(id);
+  if (ownerId === null) {
+    return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+  }
+  // ownerId === undefined means legacy seed data with no owner — forbid writes to protect it
+  if (ownerId !== userId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  return { userId };
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Require an authenticated Clerk user to create a listing.
+    // The client cannot supply its own userId — we use the one from the session.
+    const { userId: authUserId } = await auth();
+    if (!authUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       make,
@@ -47,7 +80,6 @@ export async function POST(request: NextRequest) {
       sellerPhone,
       sellerEmail,
       tier,
-      userId,
       status,
       promoCode,
     } = body;
@@ -109,7 +141,8 @@ export async function POST(request: NextRequest) {
       sellerEmail,
       featured: false,
       tier: tier || 'free',
-      userId: userId || null,
+      // Always use the authenticated userId — never trust client-supplied userId.
+      userId: authUserId,
       status: listingStatus,
     } as any);
 
@@ -121,6 +154,7 @@ export async function POST(request: NextRequest) {
       model: listing.model,
       year: listing.year,
       sellerEmail: listing.sellerEmail,
+      userId: authUserId,
     });
 
     return NextResponse.json({ ...listing, promoApplied: promoValid }, { status: 201 });
@@ -174,6 +208,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Auth check: caller must be signed in AND own this listing
+    const ownerCheck = await requireOwner(id);
+    if (ownerCheck instanceof NextResponse) return ownerCheck;
+
     // If only status is being changed, use the status-specific function
     if (status && Object.keys(updates).length === 0) {
       const validStatuses = ['active', 'inactive', 'sold', 'pending_payment'];
@@ -197,6 +235,10 @@ export async function PATCH(request: NextRequest) {
       : tierDowngrade
         ? 'active'
         : (status || undefined);
+
+    // Never allow user_id to be rewritten via PATCH body
+    delete updates.userId;
+    delete updates.user_id;
 
     // Otherwise, update listing fields
     const listing = await updateListing(id, {
@@ -231,6 +273,10 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Auth check: caller must be signed in AND own this listing
+    const ownerCheck = await requireOwner(id);
+    if (ownerCheck instanceof NextResponse) return ownerCheck;
 
     await updateListingStatus(id, status);
     return NextResponse.json({ success: true, status }, { status: 200 });

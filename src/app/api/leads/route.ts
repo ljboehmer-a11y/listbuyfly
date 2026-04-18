@@ -10,6 +10,27 @@ function getResend(): Resend | null {
   return _resend;
 }
 
+// Escape untrusted input before interpolating into HTML email templates.
+// A malicious buyer could otherwise inject <a href="phish.com"> links,
+// <script> tags, <img src=x onerror=...>, etc. into the seller's inbox.
+function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Escape for use inside an HTML attribute value (e.g. href="mailto:${...}")
+// Keeps attribute-breaking characters from turning a mailto: into a second
+// attribute or a javascript: URL. We also reject anything that doesn't look
+// like a plain email/phone by stripping whitespace and control characters.
+function escapeAttr(value: unknown): string {
+  return escapeHtml(String(value ?? '').replace(/[\r\n\t]/g, ''));
+}
+
 // Verify reCAPTCHA v3 token with Google
 async function verifyRecaptcha(token: string): Promise<{ success: boolean; score: number }> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
@@ -84,6 +105,21 @@ export async function POST(request: NextRequest) {
     const resend = getResend();
     if (listing?.sellerEmail && resend) {
       try {
+        // Escape ALL interpolated values — buyer-supplied (high-risk) AND
+        // listing-supplied (still user-generated content) — so nothing in the
+        // email body can break out into raw HTML or attribute context.
+        const safeBuyerName = escapeHtml(buyerName);
+        const safeBuyerEmail = escapeHtml(buyerEmail);
+        const safeBuyerEmailAttr = escapeAttr(buyerEmail);
+        const safeBuyerPhone = escapeHtml(buyerPhone);
+        const safeBuyerPhoneAttr = escapeAttr(buyerPhone);
+        const safeMessage = escapeHtml(message);
+        const safeYear = escapeHtml(listing.year);
+        const safeMake = escapeHtml(listing.make);
+        const safeModel = escapeHtml(listing.model);
+        const safeNNumber = escapeHtml(listing.nNumber);
+        const safeListingIdAttr = escapeAttr(listing.id);
+
         await resend.emails.send({
           from: 'List Buy Fly <leads@listbuyfly.com>',
           to: listing.sellerEmail,
@@ -95,7 +131,7 @@ export async function POST(request: NextRequest) {
               </div>
               <div style="background: #ffffff; padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
                 <p style="color: #334155; font-size: 16px; margin-top: 0;">
-                  Someone is interested in your <strong>${listing.year} ${listing.make} ${listing.model}</strong> (${listing.nNumber}).
+                  Someone is interested in your <strong>${safeYear} ${safeMake} ${safeModel}</strong> (${safeNNumber}).
                 </p>
 
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -103,15 +139,15 @@ export async function POST(request: NextRequest) {
                   <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                       <td style="padding: 6px 0; color: #64748b; width: 80px;">Name</td>
-                      <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${buyerName}</td>
+                      <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${safeBuyerName}</td>
                     </tr>
                     <tr>
                       <td style="padding: 6px 0; color: #64748b;">Email</td>
-                      <td style="padding: 6px 0;"><a href="mailto:${buyerEmail}" style="color: #f59e0b; font-weight: 600;">${buyerEmail}</a></td>
+                      <td style="padding: 6px 0;"><a href="mailto:${safeBuyerEmailAttr}" style="color: #f59e0b; font-weight: 600;">${safeBuyerEmail}</a></td>
                     </tr>
                     <tr>
                       <td style="padding: 6px 0; color: #64748b;">Phone</td>
-                      <td style="padding: 6px 0;"><a href="tel:${buyerPhone}" style="color: #f59e0b; font-weight: 600;">${buyerPhone}</a></td>
+                      <td style="padding: 6px 0;"><a href="tel:${safeBuyerPhoneAttr}" style="color: #f59e0b; font-weight: 600;">${safeBuyerPhone}</a></td>
                     </tr>
                   </table>
                 </div>
@@ -119,12 +155,12 @@ export async function POST(request: NextRequest) {
                 ${message ? `
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
                   <h3 style="color: #0f172a; margin-top: 0; margin-bottom: 8px;">Message</h3>
-                  <p style="color: #334155; margin: 0; white-space: pre-wrap;">${message}</p>
+                  <p style="color: #334155; margin: 0; white-space: pre-wrap;">${safeMessage}</p>
                 </div>
                 ` : ''}
 
                 <div style="margin-top: 24px; text-align: center;">
-                  <a href="https://listbuyfly.com/listing/${listing.id}"
+                  <a href="https://listbuyfly.com/listing/${safeListingIdAttr}"
                      style="display: inline-block; background: #f59e0b; color: #0f172a; padding: 12px 32px; border-radius: 8px; font-weight: 700; text-decoration: none;">
                     View Your Listing
                   </a>

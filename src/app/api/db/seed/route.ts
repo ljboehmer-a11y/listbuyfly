@@ -1,8 +1,14 @@
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { listings } from '@/data/listings';
+import { requireAdminToken } from '@/lib/adminAuth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Gate: require x-admin-token header matching ADMIN_SETUP_SECRET.
+  // Fails closed if the env var isn't set.
+  const gate = requireAdminToken(request);
+  if (gate) return gate;
+
   try {
     let insertedCount = 0;
 
