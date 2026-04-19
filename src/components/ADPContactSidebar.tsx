@@ -316,8 +316,11 @@ export default function ADPContactSidebar({
         </div>
       )}
 
-      {/* Lead form — sticky */}
-      <div className="sticky top-4">
+      {/* Lead form — sticky. On desktop the ADP header is also sticky (h ~68px),
+          so lead form must sit below it or "Your Name" gets hidden under the
+          black header bar. Mobile header isn't sticky so a small top-4 offset
+          is enough there. */}
+      <div className="sticky top-4 lg:top-24">
         {renderForm(false)}
       </div>
 
