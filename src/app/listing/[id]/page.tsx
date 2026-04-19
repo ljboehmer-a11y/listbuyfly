@@ -126,8 +126,10 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="bg-slate-900 text-white border-b border-slate-800">
+      {/* Header — sticky on desktop only so Back/Favorite stay reachable while
+          scrolling a long ADP. Mobile keeps it inline to preserve screen real
+          estate; mobile users already have the browser back gesture. */}
+      <header className="bg-slate-900 text-white border-b border-slate-800 lg:sticky lg:top-0 lg:z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-amber-500 hover:text-amber-600">
             <ArrowLeft className="w-5 h-5" />
@@ -174,44 +176,61 @@ export default async function ListingPage({ params }: ListingPageProps) {
             <section className="mb-8">
               <DescriptionBlock text={listing.description} />
 
-              {/* Quick Stats Grid */}
+              {/* Quick Stats Grid — hide any card whose underlying value is 0
+                  or empty. Displaying "0 Gallons" or "0/10" for fields the
+                  seller skipped just makes the listing look low-quality. Ratings
+                  use parseInt since they're stored as strings. */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Total Time</p>
-                  <p className="text-2xl font-bold text-slate-900">{listing.ttaf.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">Hours</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Engine Time</p>
-                  <p className="text-2xl font-bold text-slate-900">{listing.smoh.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">Since Major Overhaul</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Engine Life Used</p>
-                  <p className="text-2xl font-bold text-slate-900">{engineLifePercent.toFixed(0)}%</p>
-                  <p className="text-xs text-gray-500">Of TBO</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Useful Load</p>
-                  <p className="text-2xl font-bold text-slate-900">{listing.usefulLoad.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">Pounds</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Fuel Capacity</p>
-                  <p className="text-2xl font-bold text-slate-900">{listing.fuelCapacity}</p>
-                  <p className="text-xs text-gray-500">Gallons</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Exterior</p>
-                  <p className="text-2xl font-bold text-slate-900">{listing.exteriorRating}/10</p>
-                  <p className="text-xs text-gray-500">Condition</p>
-                </div>
+                {listing.ttaf > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Total Time</p>
+                    <p className="text-2xl font-bold text-slate-900">{listing.ttaf.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Hours</p>
+                  </div>
+                )}
+                {listing.smoh > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Engine Time</p>
+                    <p className="text-2xl font-bold text-slate-900">{listing.smoh.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Since Major Overhaul</p>
+                  </div>
+                )}
+                {listing.smoh > 0 && listing.tbo > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Engine Life Used</p>
+                    <p className="text-2xl font-bold text-slate-900">{engineLifePercent.toFixed(0)}%</p>
+                    <p className="text-xs text-gray-500">Of TBO</p>
+                  </div>
+                )}
+                {listing.usefulLoad > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Useful Load</p>
+                    <p className="text-2xl font-bold text-slate-900">{listing.usefulLoad.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Pounds</p>
+                  </div>
+                )}
+                {listing.fuelCapacity > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Fuel Capacity</p>
+                    <p className="text-2xl font-bold text-slate-900">{listing.fuelCapacity}</p>
+                    <p className="text-xs text-gray-500">Gallons</p>
+                  </div>
+                )}
+                {listing.exteriorRating && parseInt(listing.exteriorRating) > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Exterior</p>
+                    <p className="text-2xl font-bold text-slate-900">{listing.exteriorRating}/10</p>
+                    <p className="text-xs text-gray-500">Condition</p>
+                  </div>
+                )}
               </div>
 
-              {/* Engine Time Summary */}
-              <p className="text-sm text-gray-600 mb-8">
-                {listing.smoh.toLocaleString()} hours since major overhaul &middot; TBO {listing.tbo.toLocaleString()} hours
-              </p>
+              {/* Engine Time Summary — only when we have real data to summarize */}
+              {listing.smoh > 0 && listing.tbo > 0 && (
+                <p className="text-sm text-gray-600 mb-8">
+                  {listing.smoh.toLocaleString()} hours since major overhaul &middot; TBO {listing.tbo.toLocaleString()} hours
+                </p>
+              )}
             </section>
 
             {/* Maintenance & Status */}
@@ -306,7 +325,8 @@ export default async function ListingPage({ params }: ListingPageProps) {
               </div>
             </section>
 
-            {/* Aircraft Info */}
+            {/* Aircraft Info — Year/Make/Model/Engine/Listed Date always render
+                (required fields). Prop/Prop Time/Interior hide when empty or 0. */}
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">Aircraft Info</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -326,18 +346,24 @@ export default async function ListingPage({ params }: ListingPageProps) {
                   <p className="text-sm text-gray-600 mb-1">Engine</p>
                   <p className="font-semibold text-slate-900">{listing.engine}</p>
                 </div>
-                <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Propeller</p>
-                  <p className="font-semibold text-slate-900">{listing.prop}</p>
-                </div>
-                <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Prop Time</p>
-                  <p className="font-semibold text-slate-900">{listing.propTime.toLocaleString()} hrs</p>
-                </div>
-                <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Interior Condition</p>
-                  <p className="font-semibold text-slate-900">{listing.interiorRating}/10</p>
-                </div>
+                {listing.prop && listing.prop.trim() !== '' && (
+                  <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Propeller</p>
+                    <p className="font-semibold text-slate-900">{listing.prop}</p>
+                  </div>
+                )}
+                {listing.propTime > 0 && (
+                  <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Prop Time</p>
+                    <p className="font-semibold text-slate-900">{listing.propTime.toLocaleString()} hrs</p>
+                  </div>
+                )}
+                {listing.interiorRating && parseInt(listing.interiorRating) > 0 && (
+                  <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Interior Condition</p>
+                    <p className="font-semibold text-slate-900">{listing.interiorRating}/10</p>
+                  </div>
+                )}
                 <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">Listed Date</p>
                   <p className="font-semibold text-slate-900">{new Date(listing.listedDate).toLocaleDateString()}</p>
@@ -359,38 +385,45 @@ export default async function ListingPage({ params }: ListingPageProps) {
         </div>
       </main>
 
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Product',
-            name: `${listing.year} ${listing.make} ${listing.model}`,
-            description: listing.description,
-            image: 'https://listbuyfly.com/aircraft.png',
-            brand: {
-              '@type': 'Brand',
-              name: listing.make,
-            },
-            offers: {
-              '@type': 'Offer',
-              url: `https://listbuyfly.com/listing/${listing.id}`,
-              priceCurrency: 'USD',
-              price: listing.price.toString(),
-              availability: 'https://schema.org/InStock',
-            },
-            aggregateRating: {
-              '@type': 'AggregateRating',
-              ratingValue: ((parseInt(listing.exteriorRating) + parseInt(listing.interiorRating)) / 2).toString(),
-              bestRating: '10',
-              worstRating: '1',
-            },
-            identifier: listing.nNumber,
-            sameAs: `https://listbuyfly.com/listing/${listing.id}`,
-          }),
-        }}
-      />
+      {/* JSON-LD Structured Data — only emit aggregateRating when both exterior
+          and interior ratings are real values. Missing fields would produce
+          NaN and trip Google's Rich Results validator. */}
+      {(() => {
+        const ext = parseInt(listing.exteriorRating);
+        const intr = parseInt(listing.interiorRating);
+        const hasRatings = !isNaN(ext) && ext > 0 && !isNaN(intr) && intr > 0;
+        const structured: Record<string, unknown> = {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: `${listing.year} ${listing.make} ${listing.model}`,
+          description: listing.description,
+          image: 'https://listbuyfly.com/aircraft.png',
+          brand: { '@type': 'Brand', name: listing.make },
+          offers: {
+            '@type': 'Offer',
+            url: `https://listbuyfly.com/listing/${listing.id}`,
+            priceCurrency: 'USD',
+            price: listing.price.toString(),
+            availability: 'https://schema.org/InStock',
+          },
+          identifier: listing.nNumber,
+          sameAs: `https://listbuyfly.com/listing/${listing.id}`,
+        };
+        if (hasRatings) {
+          structured.aggregateRating = {
+            '@type': 'AggregateRating',
+            ratingValue: ((ext + intr) / 2).toString(),
+            bestRating: '10',
+            worstRating: '1',
+          };
+        }
+        return (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+          />
+        );
+      })()}
     </div>
   );
 }
