@@ -172,6 +172,8 @@ function CreateListingForm() {
           sellerName: listing.sellerName || '',
           sellerPhone: listing.sellerPhone || '',
           sellerEmail: listing.sellerEmail || '',
+          // If the listing already has contact info saved, show the fields pre-filled
+          showContactInfo: !!(listing.sellerName || listing.sellerPhone || listing.sellerEmail),
           tier: listing.tier || 'free',
           termsAccepted: true,
         });
