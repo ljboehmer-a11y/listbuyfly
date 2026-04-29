@@ -145,7 +145,7 @@ export default function ADPContactSidebar({
     }
 
     return (
-      <div className="bg-slate-50 rounded-lg p-8 border border-gray-200">
+      <div className={inModal ? 'bg-slate-50 rounded-lg p-8 border border-gray-200' : 'p-6'}>
         {!isPaid && !inModal && (
           <div className="flex items-center gap-2 mb-4">
             <Lock className="w-5 h-5 text-amber-500" />
@@ -321,7 +321,12 @@ export default function ADPContactSidebar({
           black header bar. Mobile header isn't sticky so a small top-4 offset
           is enough there. */}
       <div className="sticky top-4 lg:top-24">
-        {renderForm(false)}
+        <div className="bg-slate-50 border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-6 pt-5 pb-2">
+            <h3 className="text-xl font-bold text-slate-900">Contact Seller</h3>
+          </div>
+          {renderForm(false)}
+        </div>
       </div>
 
       {/* Modal */}
