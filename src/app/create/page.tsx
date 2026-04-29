@@ -36,6 +36,7 @@ interface ListingFormData {
   sellerName: string;
   sellerPhone: string;
   sellerEmail: string;
+  showContactInfo: boolean;
   tier: 'free' | 'paid';
   termsAccepted: boolean;
 }
@@ -69,6 +70,7 @@ const INITIAL_FORM_DATA: ListingFormData = {
   sellerName: '',
   sellerPhone: '',
   sellerEmail: '',
+  showContactInfo: true,
   tier: 'free',
   termsAccepted: true,
 };
@@ -1138,52 +1140,69 @@ function CreateListingForm() {
 
           {/* Seller Contact */}
           <section className="bg-slate-50 border border-gray-200 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Your Contact Information</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Your Contact Information</h2>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Name / Company Name
-                  <span className="block text-xs text-slate-500 font-normal mt-0.5">
-                    Displayed on the listing page for premium listings only.
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  name="sellerName"
-                  value={formData.sellerName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
-                />
-              </div>
+            {/* Opt-in checkbox — unchecking hides fields and routes leads to account email instead */}
+            <label className="flex items-start gap-3 cursor-pointer mb-6">
+              <input
+                type="checkbox"
+                name="showContactInfo"
+                checked={formData.showContactInfo}
+                onChange={handleInputChange}
+                className="w-5 h-5 mt-0.5 accent-amber-500 flex-shrink-0"
+              />
+              <span className="text-sm text-slate-700">
+                Check this box to display your contact information on the listing page. If unchecked,
+                leads will route directly to your account email address.
+              </span>
+            </label>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                <input
-                  type="tel"
-                  name="sellerPhone"
-                  value={formData.sellerPhone}
-                  onChange={handleInputChange}
-                  placeholder="(555) 123-4567"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
-                />
-              </div>
+            {formData.showContactInfo && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Name / Company Name
+                    <span className="block text-xs text-slate-500 font-normal mt-0.5">
+                      Displayed on the listing page for premium listings only.
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="sellerName"
+                    value={formData.sellerName}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  />
+                </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  name="sellerEmail"
-                  value={formData.sellerEmail}
-                  onChange={handleInputChange}
-                  placeholder="you@example.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    name="sellerPhone"
+                    value={formData.sellerPhone}
+                    onChange={handleInputChange}
+                    placeholder="(555) 123-4567"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    name="sellerEmail"
+                    value={formData.sellerEmail}
+                    onChange={handleInputChange}
+                    placeholder="you@example.com"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </section>
 
           {/* Terms Acceptance */}
