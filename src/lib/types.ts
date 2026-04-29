@@ -30,7 +30,7 @@ export interface Listing {
   sellerName: string
   sellerPhone: string
   sellerEmail: string
-  showContactInfo: boolean
+  showContactInfo?: boolean
   listedDate: string
   featured: boolean
   tier: 'free' | 'paid'
