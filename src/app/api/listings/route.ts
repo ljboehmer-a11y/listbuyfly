@@ -109,17 +109,15 @@ export async function POST(request: NextRequest) {
       promoCode,
     } = body;
 
-    // Validate required fields (price is optional — Call/Email for Price)
+    // Validate required fields (price is optional; seller contact fields are
+    // optional — sellers may choose not to display contact info publicly)
     if (
       !make ||
       !model ||
       !year ||
       !engine ||
       !city ||
-      !state ||
-      !sellerName ||
-      !sellerPhone ||
-      !sellerEmail
+      !state
     ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
