@@ -70,6 +70,18 @@ export async function GET(request: NextRequest) {
       ALTER TABLE leads ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN DEFAULT false
     `;
 
+    // Add show_contact_info column — sellers can opt out of displaying contact
+    // info publicly. Default true preserves existing behavior for listings
+    // created before this column existed.
+    await sql`
+      ALTER TABLE listings ADD COLUMN IF NOT EXISTS show_contact_info BOOLEAN NOT NULL DEFAULT true
+    `;
+
+    // Relax NOT NULL on seller contact fields — they're now optional
+    await sql`ALTER TABLE listings ALTER COLUMN seller_name SET DEFAULT ''`;
+    await sql`ALTER TABLE listings ALTER COLUMN seller_phone SET DEFAULT ''`;
+    await sql`ALTER TABLE listings ALTER COLUMN seller_email SET DEFAULT ''`;
+
     // Indexes on frequently-queried columns. Without these, the homepage
     // "active listings" query, dashboard "my listings" query, and lead
     // lookups become full table scans as the DB grows. Creating them up

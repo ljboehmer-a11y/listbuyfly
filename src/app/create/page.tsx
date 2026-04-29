@@ -387,13 +387,22 @@ function CreateListingForm() {
         fuelCapacity: num(formData.fuelCapacity),
       };
 
+      // When the seller opts out of displaying contact info, wipe those fields
+      // so stale data from a previous edit doesn't leak through to the ADP.
+      const contactFields = formData.showContactInfo
+        ? {
+            sellerName: formData.sellerName || user?.fullName || '',
+            sellerPhone: formData.sellerPhone || '',
+            sellerEmail: formData.sellerEmail || user?.primaryEmailAddress?.emailAddress || '',
+          }
+        : { sellerName: '', sellerPhone: '', sellerEmail: '' };
+
       const payload = {
         ...formData,
         ...numericData,
+        ...contactFields,
         images: allImages,
         userId: user?.id,
-        sellerName: formData.sellerName || user?.fullName || '',
-        sellerEmail: formData.sellerEmail || user?.primaryEmailAddress?.emailAddress || '',
       };
 
       if (isEditMode) {

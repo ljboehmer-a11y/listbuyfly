@@ -117,7 +117,8 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
   const engineLifePercent = (listing.smoh / listing.tbo) * 100;
 
-  const isPaid = listing.tier === 'paid';
+  // Show contact info only if paid AND seller opted in to display it
+  const isPaid = listing.tier === 'paid' && listing.showContactInfo !== false;
 
   // User-created listings have images in the images array; seed listings use Unsplash
   const listingImages = listing.images && listing.images.length > 0
