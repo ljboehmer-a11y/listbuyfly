@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ImageCarouselProps {
@@ -12,7 +12,11 @@ interface ImageCarouselProps {
 
 export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCarouselProps) {
   const [current, setCurrent] = useState(0);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Refs hold touch state so the non-passive listener can read them without stale closures
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // null = undecided, true = horizontal, false = vertical
+  const directionRef = useRef<boolean | null>(null);
 
   const count = images.length;
 
@@ -28,19 +32,59 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
     setCurrent((c) => (c === count - 1 ? 0 : c + 1));
   }, [count]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientX);
-  };
+  // Non-passive touch handlers so we can preventDefault on horizontal swipes,
+  // which stops the page from scrolling while the user navigates photos.
+  // React attaches touch listeners as passive by default (can't preventDefault there),
+  // so we add them manually via a ref.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || count <= 1) return;
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-    const diff = touchStart - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) next();
-      else prev();
-    }
-    setTouchStart(null);
-  };
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      directionRef.current = null;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const dx = e.touches[0].clientX - touchStartRef.current.x;
+      const dy = e.touches[0].clientY - touchStartRef.current.y;
+
+      // Lock direction once movement exceeds 5px threshold
+      if (directionRef.current === null) {
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+          directionRef.current = Math.abs(dx) >= Math.abs(dy);
+        }
+      }
+
+      // Only block native scroll when we've confirmed a horizontal gesture
+      if (directionRef.current === true) {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current || directionRef.current !== true) {
+        touchStartRef.current = null;
+        directionRef.current = null;
+        return;
+      }
+      const dx = touchStartRef.current.x - e.changedTouches[0].clientX;
+      if (dx > 40) setCurrent((c) => (c === count - 1 ? 0 : c + 1));
+      else if (dx < -40) setCurrent((c) => (c === 0 ? count - 1 : c - 1));
+      touchStartRef.current = null;
+      directionRef.current = null;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [count]);
 
   if (count === 0) {
     return (
@@ -54,9 +98,8 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
 
   return (
     <div
+      ref={containerRef}
       className={`relative overflow-hidden group ${isDetail ? 'aspect-[3/2] w-full rounded-lg' : 'h-full'}`}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Images */}
       <div
@@ -76,22 +119,24 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
         ))}
       </div>
 
-      {/* Navigation arrows */}
+      {/* Navigation arrows — always visible on card, full-opacity on detail */}
       {count > 1 && (
         <>
           <button
             onClick={prev}
-            className={`absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all ${
-              isDetail ? 'w-10 h-10 opacity-80' : 'w-8 h-8 opacity-0 group-hover:opacity-100'
-            } flex items-center justify-center`}
+            className={`absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors ${
+              isDetail ? 'w-10 h-10' : 'w-8 h-8'
+            }`}
+            aria-label="Previous photo"
           >
             <ChevronLeft className={isDetail ? 'w-6 h-6' : 'w-5 h-5'} />
           </button>
           <button
             onClick={next}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all ${
-              isDetail ? 'w-10 h-10 opacity-80' : 'w-8 h-8 opacity-0 group-hover:opacity-100'
-            } flex items-center justify-center`}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors ${
+              isDetail ? 'w-10 h-10' : 'w-8 h-8'
+            }`}
+            aria-label="Next photo"
           >
             <ChevronRight className={isDetail ? 'w-6 h-6' : 'w-5 h-5'} />
           </button>
@@ -117,7 +162,7 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
 
       {/* Photo count badge */}
       {count > 1 && !isDetail && (
-        <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
           {current + 1}/{count}
         </div>
       )}
