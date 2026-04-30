@@ -46,11 +46,13 @@ function rowToListing(row: any): Listing {
   };
 }
 
-// Get all active listings (status = 'active')
+// Get all publicly-visible listings (active + pending_sale)
 export async function getAllListings(): Promise<Listing[]> {
   try {
     const result = await sql`
-      SELECT * FROM listings WHERE status = 'active' ORDER BY listed_date DESC
+      SELECT * FROM listings
+      WHERE status IN ('active', 'pending_sale')
+      ORDER BY listed_date DESC
     `;
     return result.rows.map(rowToListing);
   } catch (error) {
@@ -314,6 +316,44 @@ export async function getLeadCountForUser(userId: string): Promise<number> {
   } catch (error) {
     console.error('Error getting lead count:', error);
     return 0;
+  }
+}
+
+// Hard-delete a listing and its associated leads from the database.
+// Leads are deleted first to satisfy the FK constraint on listing_id.
+export async function deleteListing(id: string): Promise<boolean> {
+  try {
+    await sql`DELETE FROM leads WHERE listing_id = ${id}`;
+    const result = await sql`DELETE FROM listings WHERE id = ${id}`;
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error deleting listing:', error);
+    throw error;
+  }
+}
+
+// Delete inactive listings that have been inactive for 90+ days.
+// Called by the daily cleanup cron. Returns the number of rows deleted.
+export async function deleteStaleInactiveListings(): Promise<number> {
+  try {
+    // Delete leads for stale listings first (FK constraint)
+    await sql`
+      DELETE FROM leads
+      WHERE listing_id IN (
+        SELECT id FROM listings
+        WHERE status = 'inactive'
+          AND updated_at < NOW() - INTERVAL '90 days'
+      )
+    `;
+    const result = await sql`
+      DELETE FROM listings
+      WHERE status = 'inactive'
+        AND updated_at < NOW() - INTERVAL '90 days'
+    `;
+    return result.rowCount ?? 0;
+  } catch (error) {
+    console.error('Error deleting stale listings:', error);
+    throw error;
   }
 }
 

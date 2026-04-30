@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { UserButton, useUser } from '@clerk/nextjs';
-import { MoreVertical, Edit2, Eye, ToggleRight, ToggleLeft, CheckCircle, Plus, CreditCard } from 'lucide-react';
+import { MoreVertical, Edit2, Eye, ToggleRight, ToggleLeft, Clock, Plus, CreditCard, Trash2 } from 'lucide-react';
 import { Listing } from '@/lib/types';
 
 interface DashboardContentProps {
@@ -21,6 +21,8 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // ID of listing pending delete confirmation; null = modal closed
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -30,7 +32,7 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
 
   // Handle status change
   const handleStatusChange = useCallback(
-    async (listingId: string, newStatus: 'active' | 'inactive' | 'sold') => {
+    async (listingId: string, newStatus: 'active' | 'inactive' | 'sold' | 'pending_sale') => {
       setLoadingId(listingId);
 
       // Optimistic update
@@ -45,45 +47,72 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
           body: JSON.stringify({ id: listingId, status: newStatus }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to update listing status');
-        }
+        if (!response.ok) throw new Error('Failed to update listing status');
 
-        showToast(`Listing marked as ${newStatus}`, 'success');
+        const label =
+          newStatus === 'pending_sale' ? 'marked as pending sale' :
+          newStatus === 'inactive'     ? 'deactivated'            :
+          newStatus === 'active'       ? 'activated'              : newStatus;
+        showToast(`Listing ${label}`, 'success');
       } catch (error) {
         console.error('Error updating listing status:', error);
         showToast('Failed to update listing status', 'error');
-
         // Revert optimistic update
         setLocalListings((prev) =>
-          prev.map((l) =>
-            l.id === listingId
-              ? { ...l, status: l.status === 'sold' ? 'active' : 'inactive' }
-              : l
-          )
+          prev.map((l) => (l.id === listingId ? { ...l, status: listings.find((o) => o.id === listingId)?.status || 'active' } : l))
         );
       } finally {
         setLoadingId(null);
       }
     },
-    []
+    [listings]
   );
 
-  // Toggle between active and inactive
+  // Toggle between active and inactive — warn on deactivate about 90-day expiry
   const toggleActive = useCallback(
     async (listingId: string, currentStatus?: string) => {
       const newStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
+      if (newStatus === 'inactive') {
+        const ok = window.confirm(
+          'If you deactivate this listing, it will be automatically deleted after 90 days of inactivity. Continue?'
+        );
+        if (!ok) return;
+      }
       await handleStatusChange(listingId, newStatus);
     },
     [handleStatusChange]
   );
 
-  // Mark as sold
-  const markAsSold = useCallback(
+  // Mark as pending sale
+  const markPending = useCallback(
     async (listingId: string) => {
-      await handleStatusChange(listingId, 'sold');
+      await handleStatusChange(listingId, 'pending_sale');
     },
     [handleStatusChange]
+  );
+
+  // Hard-delete a listing after the user confirms in the modal
+  const handleDelete = useCallback(
+    async (listingId: string) => {
+      setDeleteConfirmId(null);
+      setLoadingId(listingId);
+      try {
+        const response = await fetch('/api/listings', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: listingId }),
+        });
+        if (!response.ok) throw new Error('Delete failed');
+        setLocalListings((prev) => prev.filter((l) => l.id !== listingId));
+        showToast('Listing deleted', 'success');
+      } catch (error) {
+        console.error('Error deleting listing:', error);
+        showToast('Failed to delete listing', 'error');
+      } finally {
+        setLoadingId(null);
+      }
+    },
+    []
   );
 
   // Redirect to Stripe checkout for pending_payment listings
@@ -100,9 +129,7 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
         if (!response.ok) throw new Error('Failed to create checkout session');
 
         const { url } = await response.json();
-        if (url) {
-          window.location.href = url;
-        }
+        if (url) window.location.href = url;
       } catch (error) {
         console.error('Error creating checkout session:', error);
         showToast('Failed to start payment. Please try again.', 'error');
@@ -115,6 +142,9 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
 
   const activeCount = localListings.filter((l) => l.status === 'active').length;
   const totalCount = localListings.length;
+
+  // The listing whose delete is being confirmed (for the modal title)
+  const deleteTarget = localListings.find((l) => l.id === deleteConfirmId);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -171,26 +201,13 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
         {localListings.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <div className="mb-4 text-slate-400">
-              <svg
-                className="mx-auto h-12 w-12"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              You haven't listed any aircraft yet.
-            </h3>
-            <p className="text-slate-600 mb-6">
-              Create your first listing to start selling!
-            </p>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">You haven&apos;t listed any aircraft yet.</h3>
+            <p className="text-slate-600 mb-6">Create your first listing to start selling!</p>
             <Link href="/create">
               <button className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-medium transition">
                 <Plus size={20} />
@@ -205,44 +222,26 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
               <table className="w-full">
                 <thead className="bg-slate-100 border-b">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-                      Aircraft
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-                      Price
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-                      Location
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-                      Listed
-                    </th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-slate-900">
-                      Actions
-                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Aircraft</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Price</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Location</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Status</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">Listed</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-slate-900">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {localListings.map((listing) => (
                     <tr key={listing.id} className="hover:bg-slate-50 transition">
                       <td className="px-6 py-4">
-                        <div className="font-medium text-slate-900">
-                          {listing.year} {listing.make} {listing.model}
-                        </div>
+                        <div className="font-medium text-slate-900">{listing.year} {listing.make} {listing.model}</div>
                         <div className="text-sm text-slate-500">{listing.nNumber}</div>
                       </td>
                       <td className="px-6 py-4 text-slate-900 font-medium">
                         {listing.price && listing.price > 0 ? `$${listing.price.toLocaleString()}` : 'Call/Email'}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {listing.city}, {listing.state}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={listing.status} />
-                      </td>
+                      <td className="px-6 py-4 text-slate-600">{listing.city}, {listing.state}</td>
+                      <td className="px-6 py-4"><StatusBadge status={listing.status} /></td>
                       <td className="px-6 py-4 text-slate-600 text-sm">
                         {new Date(listing.listedDate).toLocaleDateString()}
                       </td>
@@ -262,6 +261,14 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                                 <Edit2 size={18} className="text-amber-500" />
                               </button>
                             </Link>
+                            <button
+                              onClick={() => setDeleteConfirmId(listing.id)}
+                              disabled={loadingId === listing.id}
+                              className="p-2 hover:bg-slate-100 rounded transition disabled:opacity-50"
+                              title="Delete listing"
+                            >
+                              <Trash2 size={18} className="text-red-400 hover:text-red-600" />
+                            </button>
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
@@ -269,11 +276,7 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                               onClick={() => toggleActive(listing.id, listing.status)}
                               disabled={loadingId === listing.id}
                               className="p-2 hover:bg-slate-100 rounded transition disabled:opacity-50"
-                              title={
-                                listing.status === 'inactive'
-                                  ? 'Activate listing'
-                                  : 'Deactivate listing'
-                              }
+                              title={listing.status === 'inactive' ? 'Activate listing' : 'Deactivate listing'}
                             >
                               {listing.status === 'inactive' ? (
                                 <ToggleLeft size={18} className="text-slate-400" />
@@ -282,18 +285,14 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                               )}
                             </button>
                             <button
-                              onClick={() => markAsSold(listing.id)}
-                              disabled={loadingId === listing.id || listing.status === 'sold'}
+                              onClick={() => markPending(listing.id)}
+                              disabled={loadingId === listing.id || listing.status === 'pending_sale'}
                               className="p-2 hover:bg-slate-100 rounded transition disabled:opacity-50"
-                              title="Mark as sold"
+                              title="Mark as pending sale"
                             >
-                              <CheckCircle
+                              <Clock
                                 size={18}
-                                className={
-                                  listing.status === 'sold'
-                                    ? 'text-blue-500'
-                                    : 'text-slate-400'
-                                }
+                                className={listing.status === 'pending_sale' ? 'text-amber-500' : 'text-slate-400'}
                               />
                             </button>
                             <Link href={`/create?edit=${listing.id}`}>
@@ -306,6 +305,14 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                                 <Eye size={18} className="text-slate-400" />
                               </button>
                             </Link>
+                            <button
+                              onClick={() => setDeleteConfirmId(listing.id)}
+                              disabled={loadingId === listing.id}
+                              className="p-2 hover:bg-slate-100 rounded transition disabled:opacity-50"
+                              title="Delete listing"
+                            >
+                              <Trash2 size={18} className="text-red-400 hover:text-red-600" />
+                            </button>
                           </div>
                         )}
                       </td>
@@ -318,31 +325,20 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
             {/* Mobile card view */}
             <div className="md:hidden space-y-4">
               {localListings.map((listing) => (
-                <div
-                  key={listing.id}
-                  className="bg-white rounded-lg shadow-sm border border-slate-200"
-                >
+                <div key={listing.id} className="bg-white rounded-lg shadow-sm border border-slate-200">
                   <button
-                    onClick={() =>
-                      setExpandedId(expandedId === listing.id ? null : listing.id)
-                    }
+                    onClick={() => setExpandedId(expandedId === listing.id ? null : listing.id)}
                     className="w-full px-6 py-4 text-left hover:bg-slate-50 transition"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-medium text-slate-900">
-                          {listing.year} {listing.make} {listing.model}
-                        </div>
+                        <div className="font-medium text-slate-900">{listing.year} {listing.make} {listing.model}</div>
                         <div className="text-sm text-slate-500 mt-1">{listing.nNumber}</div>
                         <div className="text-sm text-slate-600 mt-2">
                           {listing.price && listing.price > 0 ? `$${listing.price.toLocaleString()}` : 'Call/Email'}
                         </div>
-                        <div className="text-sm text-slate-600 mt-1">
-                          {listing.city}, {listing.state}
-                        </div>
-                        <div className="mt-3">
-                          <StatusBadge status={listing.status} />
-                        </div>
+                        <div className="text-sm text-slate-600 mt-1">{listing.city}, {listing.state}</div>
+                        <div className="mt-3"><StatusBadge status={listing.status} /></div>
                       </div>
                       <MoreVertical size={20} className="text-slate-400" />
                     </div>
@@ -374,6 +370,13 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                                 <Edit2 size={18} className="text-amber-500" />
                               </button>
                             </Link>
+                            <button
+                              onClick={() => setDeleteConfirmId(listing.id)}
+                              className="w-full flex items-center justify-between px-4 py-2 hover:bg-red-50 rounded transition"
+                            >
+                              <span className="text-sm text-red-600">Delete Listing</span>
+                              <Trash2 size={18} className="text-red-500" />
+                            </button>
                           </>
                         ) : (
                           <>
@@ -392,18 +395,14 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                               )}
                             </button>
                             <button
-                              onClick={() => markAsSold(listing.id)}
-                              disabled={loadingId === listing.id || listing.status === 'sold'}
+                              onClick={() => markPending(listing.id)}
+                              disabled={loadingId === listing.id || listing.status === 'pending_sale'}
                               className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-50 rounded transition disabled:opacity-50"
                             >
-                              <span className="text-sm text-slate-700">Mark as Sold</span>
-                              <CheckCircle
+                              <span className="text-sm text-slate-700">Mark Pending</span>
+                              <Clock
                                 size={18}
-                                className={
-                                  listing.status === 'sold'
-                                    ? 'text-blue-500'
-                                    : 'text-slate-400'
-                                }
+                                className={listing.status === 'pending_sale' ? 'text-amber-500' : 'text-slate-400'}
                               />
                             </button>
                             <Link href={`/create?edit=${listing.id}`} className="block">
@@ -418,6 +417,13 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
                                 <Eye size={18} className="text-slate-400" />
                               </button>
                             </Link>
+                            <button
+                              onClick={() => setDeleteConfirmId(listing.id)}
+                              className="w-full flex items-center justify-between px-4 py-2 hover:bg-red-50 rounded transition"
+                            >
+                              <span className="text-sm text-red-600">Delete Listing</span>
+                              <Trash2 size={18} className="text-red-500" />
+                            </button>
                           </>
                         )}
                       </div>
@@ -429,6 +435,37 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
           </div>
         )}
       </main>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmId && deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-2">Delete Listing</h2>
+            <p className="text-slate-600 mb-1">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-slate-900">
+                {deleteTarget.year} {deleteTarget.make} {deleteTarget.model}
+              </span>
+              ?
+            </p>
+            <p className="text-sm text-red-600 font-medium mb-6">This cannot be reversed.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition"
+              >
+                Yes, Delete
+              </button>
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-2.5 rounded-lg transition"
+              >
+                No, Keep It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast notification */}
       {toast && (
@@ -453,6 +490,10 @@ function StatusBadge({ status }: { status?: string }) {
 
   if (status === 'inactive') {
     return <span className={`${baseClass} bg-gray-100 text-gray-700`}>Inactive</span>;
+  }
+
+  if (status === 'pending_sale') {
+    return <span className={`${baseClass} bg-amber-100 text-amber-700`}>Pending Sale</span>;
   }
 
   if (status === 'sold') {

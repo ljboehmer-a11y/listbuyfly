@@ -174,6 +174,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
             <ADPImageGallery
               images={listingImages}
               alt={`${listing.year} ${listing.make} ${listing.model}`}
+              pendingSale={listing.status === 'pending_sale'}
             />
 
             {/* Description */}

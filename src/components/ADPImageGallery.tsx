@@ -7,17 +7,23 @@ import ImageLightbox from '@/components/ImageLightbox';
 interface ADPImageGalleryProps {
   images: string[];
   alt: string;
+  pendingSale?: boolean;
 }
 
-export default function ADPImageGallery({ images, alt }: ADPImageGalleryProps) {
+export default function ADPImageGallery({ images, alt, pendingSale }: ADPImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   return (
     <>
       {/* Main image carousel — click opens lightbox */}
-      <div className="mb-8 cursor-pointer" onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}>
+      <div className="mb-8 cursor-pointer relative" onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}>
         <ImageCarousel images={images} alt={alt} variant="detail" />
+        {pendingSale && (
+          <div className="absolute inset-x-0 bottom-0 bg-amber-500/90 text-slate-900 font-bold text-base sm:text-lg text-center py-3 tracking-widest uppercase pointer-events-none">
+            Pending Sale
+          </div>
+        )}
       </div>
 
       {/* Thumbnail Strip */}

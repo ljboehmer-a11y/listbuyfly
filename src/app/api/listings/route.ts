@@ -8,6 +8,7 @@ import {
   getListingOwnerId,
   updateListing,
   updateListingStatus,
+  deleteListing,
 } from '@/lib/db';
 import { enforceListingRateLimit } from '@/lib/ratelimit';
 import { requireSameOrigin } from '@/lib/originCheck';
@@ -257,7 +258,7 @@ export async function PATCH(request: NextRequest) {
 
     // If only status is being changed, use the status-specific function
     if (status && Object.keys(updates).length === 0) {
-      const validStatuses = ['active', 'inactive', 'sold', 'pending_payment'];
+      const validStatuses = ['active', 'inactive', 'sold', 'pending_payment', 'pending_sale'];
       if (!validStatuses.includes(status)) {
         return NextResponse.json(
           { error: 'Invalid status' },
@@ -298,39 +299,28 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// Hard-delete a listing the authenticated owner created.
+// Also deletes all associated leads (FK cascade handled in deleteListing).
 export async function DELETE(request: NextRequest) {
   try {
     const originBlock = requireSameOrigin(request);
     if (originBlock) return originBlock;
 
     const body = await request.json();
-    const { id, status } = body;
+    const { id } = body;
 
-    if (!id || !status) {
-      return NextResponse.json(
-        { error: 'Listing ID and status are required' },
-        { status: 400 }
-      );
-    }
-
-    if (status !== 'inactive' && status !== 'sold') {
-      return NextResponse.json(
-        { error: "Status must be 'inactive' or 'sold'" },
-        { status: 400 }
-      );
+    if (!id) {
+      return NextResponse.json({ error: 'Listing ID required' }, { status: 400 });
     }
 
     // Auth check: caller must be signed in AND own this listing
     const ownerCheck = await requireOwner(id);
     if (ownerCheck instanceof NextResponse) return ownerCheck;
 
-    await updateListingStatus(id, status);
-    return NextResponse.json({ success: true, status }, { status: 200 });
+    await deleteListing(id);
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Error deleting listing:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete listing' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to delete listing' }, { status: 500 });
   }
 }
