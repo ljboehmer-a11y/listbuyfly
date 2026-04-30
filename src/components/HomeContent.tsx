@@ -801,7 +801,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-3 sm:px-6 py-3 sm:py-4 rounded-lg font-bold transition-colors flex items-center gap-1 sm:gap-2 text-sm sm:text-base ${
-                  showFilters ? 'bg-white text-slate-900' : 'bg-slate-700 text-white hover:bg-slate-600'
+                  showFilters ? 'bg-white text-slate-900' : 'bg-slate-600 border border-slate-500 text-white hover:bg-slate-500'
                 }`}
               >
                 <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -825,7 +825,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
                   activeCollection === collection.id
                     ? 'bg-amber-500 text-slate-900'
-                    : 'bg-slate-800 border border-slate-600 text-slate-300 hover:border-amber-500'
+                    : 'bg-slate-700 border border-slate-500 text-white hover:border-amber-500 hover:bg-slate-600'
                 }`}
               >
                 {collection.label}
@@ -839,7 +839,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
               <select
                 value={zipDistance}
                 onChange={(e) => { setZipDistance(Number(e.target.value)); if (Number(e.target.value) > 0 && zipCode.length === 5) handleZipSearch(); }}
-                className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="px-3 py-2 rounded-lg bg-slate-700 border border-slate-500 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 {DISTANCE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
