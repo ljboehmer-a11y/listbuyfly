@@ -10,6 +10,7 @@ import FavoriteButton from '@/components/FavoriteButton';
 import CompareButton from '@/components/CompareButton';
 import DescriptionBlock from '@/components/DescriptionBlock';
 import { getListingById, getAllListings } from '@/lib/db';
+import ViewCounter from '@/components/ViewCounter';
 
 // Dynamic rendering — every listing (including user-created) served on demand
 export const dynamic = 'force-dynamic';
@@ -127,6 +128,8 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Fire-and-forget view count increment on every ADP load */}
+      <ViewCounter listingId={listing.id} />
       {/* Header — sticky on desktop only so Back/Favorite stay reachable while
           scrolling a long ADP. Mobile keeps it inline to preserve screen real
           estate; mobile users already have the browser back gesture. */}

@@ -42,6 +42,7 @@ function rowToListing(row: any): Listing {
     tier: row.tier,
     status: row.status || 'active',
     userId: row.user_id || undefined,
+    viewCount: row.view_count ?? 0,
   };
 }
 
@@ -313,6 +314,18 @@ export async function getLeadCountForUser(userId: string): Promise<number> {
   } catch (error) {
     console.error('Error getting lead count:', error);
     return 0;
+  }
+}
+
+// Increment view count for a listing. Fire-and-forget — errors are logged
+// but never surfaced to the caller so a DB hiccup can't break page loads.
+export async function incrementViewCount(id: string): Promise<void> {
+  try {
+    await sql`
+      UPDATE listings SET view_count = view_count + 1 WHERE id = ${id}
+    `;
+  } catch (error) {
+    console.error('Error incrementing view count:', error);
   }
 }
 

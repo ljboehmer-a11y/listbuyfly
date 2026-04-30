@@ -378,7 +378,9 @@ export default function HomeContent({ listings }: HomeContentProps) {
     }
 
     // Sort
-    if (sortBy === 'newest') {
+    if (sortBy === 'popular') {
+      results.sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
+    } else if (sortBy === 'newest') {
       results.sort((a, b) => new Date(b.listedDate).getTime() - new Date(a.listedDate).getTime());
     } else if (sortBy === 'priceAsc') {
       // Listings without a price (Call/Email) sort to the end
@@ -569,6 +571,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
             </div>
             <div className="pb-8">
               {[
+                { value: 'popular', label: 'Most Popular' },
                 { value: 'newest', label: 'Newest Listed' },
                 { value: 'priceDesc', label: 'Highest Price' },
                 { value: 'priceAsc', label: 'Lowest Price' },
@@ -1010,6 +1013,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
+                  <option value="popular">Most Popular</option>
                   <option value="newest">Newest Listed</option>
                   <option value="priceAsc">Price: Low → High</option>
                   <option value="priceDesc">Price: High → Low</option>

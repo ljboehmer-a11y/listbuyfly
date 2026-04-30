@@ -36,6 +36,7 @@ export interface Listing {
   tier: 'free' | 'paid'
   status?: 'active' | 'inactive' | 'sold' | 'pending_payment'
   userId?: string
+  viewCount?: number
 }
 
 export interface Lead {

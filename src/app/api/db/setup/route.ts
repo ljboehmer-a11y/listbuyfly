@@ -82,6 +82,11 @@ export async function GET(request: NextRequest) {
     await sql`ALTER TABLE listings ALTER COLUMN seller_phone SET DEFAULT ''`;
     await sql`ALTER TABLE listings ALTER COLUMN seller_email SET DEFAULT ''`;
 
+    // View count for Most Popular sort
+    await sql`
+      ALTER TABLE listings ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0
+    `;
+
     // Indexes on frequently-queried columns. Without these, the homepage
     // "active listings" query, dashboard "my listings" query, and lead
     // lookups become full table scans as the DB grows. Creating them up
