@@ -734,7 +734,10 @@ function CreateListingForm() {
 
             <div className="grid md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">TTAF (Hours)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  TTAF (Hours)
+                  <span className="text-slate-400 font-normal text-xs ml-1">(optional)</span>
+                </label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -743,7 +746,6 @@ function CreateListingForm() {
                   onChange={handleInputChange}
                   placeholder="e.g., 4257"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
                 />
               </div>
 

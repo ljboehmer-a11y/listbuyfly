@@ -333,7 +333,9 @@ export default function HomeContent({ listings }: HomeContentProps) {
       // Numeric ranges
       if (filters.minPrice !== undefined && listing.price < filters.minPrice) return false;
       if (filters.maxPrice !== undefined && listing.price > filters.maxPrice) return false;
-      if (filters.maxTTAF !== undefined && listing.ttaf > filters.maxTTAF) return false;
+      // Exclude listings with no TTAF from maxTTAF filter — "not listed" shouldn't
+      // appear in results when a buyer is specifically filtering by hours
+      if (filters.maxTTAF !== undefined && (listing.ttaf === 0 || listing.ttaf > filters.maxTTAF)) return false;
       if (filters.maxSMOH !== undefined && listing.smoh > filters.maxSMOH) return false;
       if (filters.yearMin !== undefined && listing.year < filters.yearMin) return false;
       if (filters.yearMax !== undefined && listing.year > filters.yearMax) return false;
@@ -395,7 +397,13 @@ export default function HomeContent({ listings }: HomeContentProps) {
     } else if (sortBy === 'lowSmoh') {
       results.sort((a, b) => a.smoh - b.smoh);
     } else if (sortBy === 'lowTtaf') {
-      results.sort((a, b) => a.ttaf - b.ttaf);
+      // Push "not listed" (ttaf === 0) to the bottom so real low-hour planes lead
+      results.sort((a, b) => {
+        if (a.ttaf === 0 && b.ttaf === 0) return 0;
+        if (a.ttaf === 0) return 1;
+        if (b.ttaf === 0) return -1;
+        return a.ttaf - b.ttaf;
+      });
     } else if (sortBy === 'yearDesc') {
       results.sort((a, b) => b.year - a.year);
     }
@@ -1080,7 +1088,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
                       </p>
                     </div>
                     <div className="space-y-2 mb-4 text-sm">
-                      <div className="flex justify-between"><span className="text-gray-600">TTAF:</span><span className="font-semibold text-slate-900">{listing.ttaf.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-600">TTAF:</span><span className="font-semibold text-slate-900">{listing.ttaf > 0 ? listing.ttaf.toLocaleString() : 'Not listed'}</span></div>
                       <div className="flex justify-between"><span className="text-gray-600">SMOH:</span><span className="font-semibold text-slate-900">{listing.smoh.toLocaleString()}</span></div>
                     </div>
                     {listing.description && (

@@ -182,13 +182,17 @@ export default async function ListingPage({ params }: ListingPageProps) {
                   seller skipped just makes the listing look low-quality. Ratings
                   use parseInt since they're stored as strings. */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                {listing.ttaf > 0 && (
-                  <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">Total Time</p>
-                    <p className="text-2xl font-bold text-slate-900">{listing.ttaf.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">Hours</p>
-                  </div>
-                )}
+                <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-1">Total Time</p>
+                  {listing.ttaf > 0 ? (
+                    <>
+                      <p className="text-2xl font-bold text-slate-900">{listing.ttaf.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Hours</p>
+                    </>
+                  ) : (
+                    <p className="text-lg font-semibold text-slate-400">Not listed</p>
+                  )}
+                </div>
                 {listing.smoh > 0 && (
                   <div className="bg-slate-50 p-4 rounded-lg border border-gray-200">
                     <p className="text-sm text-gray-600 mb-1">Engine Time</p>
