@@ -44,7 +44,7 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
 
   if (count === 0) {
     return (
-      <div className={`bg-gradient-to-b from-slate-200 to-slate-100 flex items-center justify-center ${variant === 'detail' ? 'h-[500px] rounded-lg' : 'h-full'}`}>
+      <div className={`bg-gradient-to-b from-slate-200 to-slate-100 flex items-center justify-center ${variant === 'detail' ? 'aspect-[3/2] w-full rounded-lg' : 'h-full'}`}>
         <span className="text-slate-400 text-sm">No photos</span>
       </div>
     );
@@ -54,7 +54,7 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
 
   return (
     <div
-      className={`relative overflow-hidden group ${isDetail ? 'h-[500px] rounded-lg' : 'h-full'}`}
+      className={`relative overflow-hidden group ${isDetail ? 'aspect-[3/2] w-full rounded-lg' : 'h-full'}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

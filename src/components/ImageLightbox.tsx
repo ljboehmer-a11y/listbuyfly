@@ -12,7 +12,10 @@ interface ImageLightboxProps {
 
 export default function ImageLightbox({ images, alt, initialIndex = 0, onClose }: ImageLightboxProps) {
   const [current, setCurrent] = useState(initialIndex);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  // dragY drives the swipe-down-to-close visual: translates image + fades backdrop
+  const [dragY, setDragY] = useState(0);
   const count = images.length;
 
   const prev = useCallback(() => {
@@ -39,24 +42,46 @@ export default function ImageLightbox({ images, alt, initialIndex = 0, onClose }
   }, [prev, next, onClose]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientX);
+    setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY === null) return;
+    const dy = e.touches[0].clientY - touchStartY;
+    // Only track downward pulls; upward swipes snap back
+    if (dy > 0) setDragY(dy);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-    const diff = touchStart - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) next();
+    if (touchStartX === null || touchStartY === null) return;
+    const dx = touchStartX - e.changedTouches[0].clientX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+
+    if (dy > 80 && dy > Math.abs(dx)) {
+      // Swipe down — dismiss
+      onClose();
+    } else if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal swipe — navigate
+      if (dx > 0) next();
       else prev();
     }
-    setTouchStart(null);
+
+    setDragY(0);
+    setTouchStartX(null);
+    setTouchStartY(null);
   };
+
+  // Backdrop fades as user drags down; fully opaque at 0, mostly transparent at 200px
+  const backdropOpacity = Math.max(0.15, 1 - dragY / 220);
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ backgroundColor: `rgba(0,0,0,${backdropOpacity})` }}
       onClick={onClose}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Top bar */}
@@ -72,8 +97,11 @@ export default function ImageLightbox({ images, alt, initialIndex = 0, onClose }
         </button>
       </div>
 
-      {/* Image — fills remaining space */}
-      <div className="flex-1 min-h-0 flex items-center justify-center relative">
+      {/* Image — fills remaining space; translates down as user swipe-drags */}
+      <div
+        className="flex-1 min-h-0 flex items-center justify-center relative"
+        style={{ transform: `translateY(${dragY}px)`, transition: dragY === 0 ? 'transform 0.2s ease' : 'none' }}
+      >
         <img
           src={images[current]}
           alt={`${alt} - Photo ${current + 1}`}
