@@ -367,7 +367,7 @@ export default function HomeContent({ listings }: HomeContentProps) {
           if (!listing.featured) return false;
           // featuredUntil = null means legacy manually-featured (always show)
           if (!listing.featuredUntil) return true;
-          return new Date(listing.featuredUntil) > now;
+          return new Date(listing.featuredUntil) > new Date();
         }
         return true;
       });
