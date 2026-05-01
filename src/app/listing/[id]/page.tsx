@@ -175,6 +175,10 @@ export default async function ListingPage({ params }: ListingPageProps) {
               images={listingImages}
               alt={`${listing.year} ${listing.make} ${listing.model}`}
               pendingSale={listing.status === 'pending_sale'}
+              featured={
+                listing.featured &&
+                (!listing.featuredUntil || new Date(listing.featuredUntil) > new Date())
+              }
             />
 
             {/* Description */}

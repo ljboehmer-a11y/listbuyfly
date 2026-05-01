@@ -363,7 +363,12 @@ export default function HomeContent({ listings }: HomeContentProps) {
           return daysOld < 90;
         }
         if (activeCollection === 'noDamage') return !listing.damageHistory;
-        if (activeCollection === 'featured') return listing.featured;
+        if (activeCollection === 'featured') {
+          if (!listing.featured) return false;
+          // featuredUntil = null means legacy manually-featured (always show)
+          if (!listing.featuredUntil) return true;
+          return new Date(listing.featuredUntil) > now;
+        }
         return true;
       });
     }
@@ -1063,7 +1068,15 @@ export default function HomeContent({ listings }: HomeContentProps) {
                   }`}
                 >
                   <div className="aspect-[4/3] relative group flex-shrink-0 overflow-hidden bg-slate-100">
-                    <ImageCarousel images={listing.images && listing.images.length > 0 ? listing.images : getListingImages(listing.id, listing.make)} alt={`${listing.year} ${listing.make} ${listing.model}`} variant="card" />
+                    <ImageCarousel
+                      images={listing.images && listing.images.length > 0 ? listing.images : getListingImages(listing.id, listing.make)}
+                      alt={`${listing.year} ${listing.make} ${listing.model}`}
+                      variant="card"
+                      featured={
+                        listing.featured &&
+                        (!listing.featuredUntil || new Date(listing.featuredUntil) > new Date())
+                      }
+                    />
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(listing.id); }}
                       className={`absolute top-2 right-2 p-2 rounded-lg shadow-md transition-all ${
@@ -1075,9 +1088,6 @@ export default function HomeContent({ listings }: HomeContentProps) {
                     >
                       <Heart className={`w-5 h-5 ${isCompared ? 'text-white fill-white' : 'text-slate-600'}`} />
                     </button>
-                    {listing.featured && (
-                      <div className="absolute top-2 left-2 bg-amber-500 text-slate-900 px-2 py-1 rounded text-xs font-bold">FEATURED</div>
-                    )}
                   </div>
                   <div className="p-3 sm:p-4 flex flex-col flex-1">
                     <h3 className="font-bold text-base sm:text-lg text-slate-900 mb-1 min-h-[3rem]">

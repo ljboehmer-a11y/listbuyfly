@@ -8,9 +8,10 @@ interface ADPImageGalleryProps {
   images: string[];
   alt: string;
   pendingSale?: boolean;
+  featured?: boolean;
 }
 
-export default function ADPImageGallery({ images, alt, pendingSale }: ADPImageGalleryProps) {
+export default function ADPImageGallery({ images, alt, pendingSale, featured }: ADPImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -18,7 +19,7 @@ export default function ADPImageGallery({ images, alt, pendingSale }: ADPImageGa
     <>
       {/* Main image carousel — click opens lightbox */}
       <div className="mb-8 cursor-pointer relative" onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}>
-        <ImageCarousel images={images} alt={alt} variant="detail" />
+        <ImageCarousel images={images} alt={alt} variant="detail" featured={featured} />
         {pendingSale && (
           <div className="absolute inset-x-0 bottom-0 bg-amber-500/90 text-slate-900 font-bold text-base sm:text-lg text-center py-3 tracking-widest uppercase pointer-events-none">
             Pending Sale

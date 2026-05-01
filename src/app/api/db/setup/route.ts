@@ -87,6 +87,12 @@ export async function GET(request: NextRequest) {
       ALTER TABLE listings ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0
     `;
 
+    // Featured expiry — set to NOW()+14 days by the Stripe webhook on first
+    // purchase. NULL means permanently featured (legacy/manually-set rows).
+    await sql`
+      ALTER TABLE listings ADD COLUMN IF NOT EXISTS featured_until TIMESTAMP
+    `;
+
     // Indexes on frequently-queried columns. Without these, the homepage
     // "active listings" query, dashboard "my listings" query, and lead
     // lookups become full table scans as the DB grows. Creating them up

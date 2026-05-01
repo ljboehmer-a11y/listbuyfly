@@ -33,6 +33,7 @@ export interface Listing {
   showContactInfo?: boolean
   listedDate: string
   featured: boolean
+  featuredUntil?: string | null
   tier: 'free' | 'paid'
   status?: 'active' | 'inactive' | 'sold' | 'pending_payment' | 'pending_sale'
   userId?: string

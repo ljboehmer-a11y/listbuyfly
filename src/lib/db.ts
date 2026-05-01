@@ -39,6 +39,7 @@ function rowToListing(row: any): Listing {
     showContactInfo: row.show_contact_info ?? true,
     listedDate: row.listed_date,
     featured: row.featured,
+    featuredUntil: row.featured_until || null,
     tier: row.tier,
     status: row.status || 'active',
     userId: row.user_id || undefined,
@@ -264,6 +265,28 @@ export async function updateListing(
   } catch (error) {
     console.error('Error updating listing:', error);
     throw error;
+  }
+}
+
+// Activate a paid listing after successful Stripe payment.
+// Sets status=active, tier=paid, featured=true, and stamps a 14-day
+// featured window. Only called from the Stripe webhook — never on
+// deactivate/reactivate — so the window starts from first purchase only.
+export async function activateListingAsPaid(id: string): Promise<boolean> {
+  try {
+    const result = await sql`
+      UPDATE listings
+      SET status = 'active',
+          tier = 'paid',
+          featured = true,
+          featured_until = NOW() + INTERVAL '14 days',
+          updated_at = NOW()
+      WHERE id = ${id}
+    `;
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Error activating paid listing:', error);
+    return false;
   }
 }
 

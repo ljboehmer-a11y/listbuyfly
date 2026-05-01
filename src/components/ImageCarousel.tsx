@@ -8,9 +8,11 @@ interface ImageCarouselProps {
   alt: string;
   /** 'card' = SRP thumbnail, 'detail' = ADP full gallery */
   variant?: 'card' | 'detail';
+  /** Show a Featured badge in the top-left corner */
+  featured?: boolean;
 }
 
-export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCarouselProps) {
+export default function ImageCarousel({ images, alt, variant = 'card', featured }: ImageCarouselProps) {
   const [current, setCurrent] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   // Refs hold touch state so the non-passive listener can read them without stale closures
@@ -118,6 +120,13 @@ export default function ImageCarousel({ images, alt, variant = 'card' }: ImageCa
           </div>
         ))}
       </div>
+
+      {/* Featured badge — top-left pill, hidden in lightbox (not rendered there) */}
+      {featured && (
+        <div className="absolute top-2 left-2 bg-amber-500 text-slate-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm pointer-events-none z-10">
+          Featured
+        </div>
+      )}
 
       {/* Navigation arrows — always visible on card, full-opacity on detail */}
       {count > 1 && (

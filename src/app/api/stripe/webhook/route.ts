@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { getListingOwnerId, updateListingStatus } from '@/lib/db';
+import { getListingOwnerId, updateListingStatus, activateListingAsPaid } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -90,9 +90,9 @@ export async function POST(request: NextRequest) {
         const ok = await ownershipMatches(listingId, userId);
         if (ok) {
           try {
-            await updateListingStatus(listingId, 'active');
+            await activateListingAsPaid(listingId);
             console.log(
-              `Listing ${listingId} activated after successful payment`
+              `Listing ${listingId} activated as paid with 14-day featured window`
             );
           } catch (error) {
             console.error(`Failed to activate listing ${listingId}:`, error);
