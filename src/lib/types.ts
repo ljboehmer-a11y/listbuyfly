@@ -34,7 +34,7 @@ export interface Listing {
   listedDate: string
   featured: boolean
   tier: 'free' | 'paid'
-  status?: 'active' | 'inactive' | 'sold' | 'pending_payment'
+  status?: 'active' | 'inactive' | 'sold' | 'pending_payment' | 'pending_sale'
   userId?: string
   viewCount?: number
 }
