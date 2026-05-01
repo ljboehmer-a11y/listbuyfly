@@ -23,6 +23,8 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // ID of listing pending delete confirmation; null = modal closed
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  // ID of listing pending deactivate confirmation; null = modal closed
+  const [deactivateConfirmId, setDeactivateConfirmId] = useState<string | null>(null);
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -68,17 +70,25 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
     [listings]
   );
 
-  // Toggle between active and inactive — warn on deactivate about 90-day expiry
+  // Toggle between active and inactive — show modal warning on deactivate
   const toggleActive = useCallback(
     async (listingId: string, currentStatus?: string) => {
-      const newStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
-      if (newStatus === 'inactive') {
-        const ok = window.confirm(
-          'If you deactivate this listing, it will be automatically deleted after 90 days of inactivity. Continue?'
-        );
-        if (!ok) return;
+      if (currentStatus !== 'inactive') {
+        // Going inactive — show the custom confirmation modal
+        setDeactivateConfirmId(listingId);
+        return;
       }
-      await handleStatusChange(listingId, newStatus);
+      // Re-activating — no confirmation needed
+      await handleStatusChange(listingId, 'active');
+    },
+    [handleStatusChange]
+  );
+
+  // Called when user confirms deactivation in the modal
+  const confirmDeactivate = useCallback(
+    async (listingId: string) => {
+      setDeactivateConfirmId(null);
+      await handleStatusChange(listingId, 'inactive');
     },
     [handleStatusChange]
   );
@@ -435,6 +445,33 @@ export default function DashboardContent({ listings, leadCount = 0 }: DashboardC
           </div>
         )}
       </main>
+
+      {/* Deactivate confirmation modal */}
+      {deactivateConfirmId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-2">Deactivate Listing</h2>
+            <p className="text-slate-600 mb-1">
+              If you deactivate this listing, it will be automatically deleted after 90 days of inactivity.
+            </p>
+            <p className="text-sm text-red-600 font-medium mb-6">This cannot be undone after 90 days.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => confirmDeactivate(deactivateConfirmId)}
+                className="flex-1 bg-slate-900 hover:bg-slate-700 text-white font-bold py-2.5 rounded-lg transition"
+              >
+                Yes, Deactivate
+              </button>
+              <button
+                onClick={() => setDeactivateConfirmId(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-2.5 rounded-lg transition"
+              >
+                No, Keep Active
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {deleteConfirmId && deleteTarget && (
