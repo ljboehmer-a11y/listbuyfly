@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Fuel, Users, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import { MapPin, Fuel, Users, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import BackButton from '@/components/BackButton';
 import { listings as seedListings } from '@/data/listings';
 import { Listing } from '@/lib/types';
 import ADPImageGallery from '@/components/ADPImageGallery';
@@ -102,10 +103,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
       <div className="min-h-screen bg-white">
         <header className="bg-slate-900 text-white border-b border-slate-800">
           <div className="max-w-7xl mx-auto px-4 py-4">
-            <Link href="/" className="flex items-center gap-2 text-amber-500 hover:text-amber-600 w-fit">
-              <ArrowLeft className="w-5 h-5" />
-              Back to Listings
-            </Link>
+            <BackButton />
           </div>
         </header>
         <main className="max-w-7xl mx-auto px-4 py-12">
@@ -135,10 +133,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
           estate; mobile users already have the browser back gesture. */}
       <header className="bg-slate-900 text-white border-b border-slate-800 lg:sticky lg:top-0 lg:z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-amber-500 hover:text-amber-600">
-            <ArrowLeft className="w-5 h-5" />
-            Back to Listings
-          </Link>
+          <BackButton />
           <div className="flex items-center gap-2">
             <FavoriteButton listingId={listing.id} />
             <CompareButton />
