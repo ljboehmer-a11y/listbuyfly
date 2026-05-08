@@ -33,24 +33,34 @@ function escapeAttr(value: unknown): string {
   return escapeHtml(String(value ?? '').replace(/[\r\n\t]/g, ''));
 }
 
-// Verify reCAPTCHA v3 token with Google
+// Verify reCAPTCHA v3 token with Google.
+// Fails OPEN on network errors — Google infrastructure issues should not
+// block legitimate leads. The IP rate limiter (5/10 min) remains the
+// primary spam defense; reCAPTCHA is defense-in-depth.
 async function verifyRecaptcha(token: string): Promise<{ success: boolean; score: number }> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
-  if (!secret) return { success: true, score: 1.0 }; // Skip if not configured
+  if (!secret) return { success: true, score: 1.0 };
 
+  let data: any;
   try {
     const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `secret=${encodeURIComponent(secret)}&response=${encodeURIComponent(token)}`,
     });
-
-    const data = await response.json();
-    return { success: data.success === true, score: data.score ?? 0 };
+    data = await response.json();
   } catch (err) {
-    console.error('reCAPTCHA verification failed:', err);
-    return { success: false, score: 0 };
+    // Network error reaching Google — fail open so leads aren't lost
+    console.error('reCAPTCHA siteverify fetch failed (failing open):', err);
+    return { success: true, score: 0.5 };
   }
+
+  // Log full response to help diagnose unexpected failures
+  if (!data.success) {
+    console.warn('reCAPTCHA siteverify returned failure:', JSON.stringify(data));
+  }
+
+  return { success: data.success === true, score: data.score ?? 0 };
 }
 
 export async function POST(request: NextRequest) {
@@ -67,7 +77,7 @@ export async function POST(request: NextRequest) {
     const { buyerName, buyerEmail, buyerPhone, message, listingId, marketingConsent, recaptchaToken } = body;
 
     // Validate required fields
-    if (!buyerName || !buyerEmail || !buyerPhone || !listingId) {
+    if (!buyerName || !buyerEmail || !listingId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -84,7 +94,7 @@ export async function POST(request: NextRequest) {
       }
 
       const recaptchaResult = await verifyRecaptcha(recaptchaToken);
-      if (!recaptchaResult.success || recaptchaResult.score < 0.5) {
+      if (!recaptchaResult.success || recaptchaResult.score < 0.3) {
         console.warn('reCAPTCHA failed:', { success: recaptchaResult.success, score: recaptchaResult.score });
         return NextResponse.json(
           { error: 'reCAPTCHA verification failed. Please try again.' },
