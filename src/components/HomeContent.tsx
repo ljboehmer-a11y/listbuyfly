@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, X, SlidersHorizontal, Heart, ChevronDown, ChevronUp, MapPin, ArrowUpDown, ArrowUp } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ChevronDown, ChevronUp, MapPin, ArrowUpDown, ArrowUp } from 'lucide-react';
 import { Listing, Filters } from '@/lib/types';
-import ImageCarousel from './ImageCarousel';
-import { getListingImages } from '@/data/aircraftImages';
 import { ALL_MAKES, getModelsForMake, getMakesForCategory, AIRCRAFT_CATEGORIES } from '@/data/aircraftTypes';
+import { getListingImages } from '@/data/aircraftImages';
+import SRPListingCard from './SRPListingCard';
 import { Show, UserButton, SignInButton } from '@clerk/nextjs';
 import CompareButton from './CompareButton';
 
@@ -1043,87 +1043,26 @@ export default function HomeContent({ listings }: HomeContentProps) {
         {/* Listing Grid */}
         {filteredListings.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-20">
-            {filteredListings.map((listing, index) => {
-              const isCompared = compareList.includes(listing.id);
-
-              return (
-                <Link
-                  key={listing.id}
-                  href={`/listing/${listing.id}`}
-                  prefetch={index < 6}
-                  onClick={() => {
-                    // Snapshot scroll position right before navigating to listing
-                    const state = {
-                      searchQuery,
-                      activeCollection,
-                      showFilters,
-                      sortBy,
-                      filters,
-                      scrollY: window.scrollY,
-                    };
-                    sessionStorage.setItem('lbf_srp_state', JSON.stringify(state));
-                  }}
-                  className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative flex flex-col no-underline ${
-                    isCompared ? 'ring-2 ring-amber-500' : ''
-                  }`}
-                >
-                  <div className="aspect-[4/3] relative group flex-shrink-0 overflow-hidden bg-slate-100">
-                    <ImageCarousel
-                      images={listing.images && listing.images.length > 0 ? listing.images : getListingImages(listing.id, listing.make)}
-                      alt={`${listing.year} ${listing.make} ${listing.model}`}
-                      variant="card"
-                      featured={
-                        listing.featured &&
-                        (!listing.featuredUntil || new Date(listing.featuredUntil) > new Date())
-                      }
-                    />
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(listing.id); }}
-                      className={`absolute top-2 right-2 p-2 rounded-lg shadow-md transition-all ${
-                        isCompared
-                          ? 'bg-amber-500 opacity-100'
-                          : 'bg-white opacity-0 group-hover:opacity-100'
-                      }`}
-                      title={isCompared ? 'Remove from favorites' : 'Add to favorites'}
-                    >
-                      <Heart className={`w-5 h-5 ${isCompared ? 'text-white fill-white' : 'text-slate-600'}`} />
-                    </button>
-                  </div>
-                  <div className="p-3 sm:p-4 flex flex-col flex-1">
-                    <h3 className="font-bold text-base sm:text-lg text-slate-900 mb-1 min-h-[3rem]">
-                      {listing.year} {listing.make} {listing.model}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">{listing.nNumber}</p>
-                    <div className="mb-4">
-                      <p className="text-xl sm:text-2xl font-bold text-amber-500">
-                        {listing.price && listing.price > 0
-                          ? `$${listing.price.toLocaleString()}`
-                          : 'Call/Email for Price'}
-                      </p>
-                    </div>
-                    <div className="space-y-2 mb-4 text-sm">
-                      <div className="flex justify-between"><span className="text-gray-600">TTAF:</span><span className="font-semibold text-slate-900">{listing.ttaf > 0 ? listing.ttaf.toLocaleString() : 'Not listed'}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-600">SMOH:</span><span className="font-semibold text-slate-900">{listing.smoh.toLocaleString()}</span></div>
-                    </div>
-                    {listing.description && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{listing.description}</p>
-                    )}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {listing.logsComplete && <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-medium">✓ Logs</span>}
-                      {listing.annualCurrent && <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-medium">✓ Annual</span>}
-                      {!listing.damageHistory && <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-medium">✓ Clean</span>}
-                    </div>
-                    <div className="mt-auto">
-                      <div className="border-t border-gray-200 pt-3 flex justify-between text-xs text-gray-600">
-                        <span>{listing.city}, {listing.state}</span>
-                        <span>{listing.engine}</span>
-                      </div>
-                      <span className="block text-center mt-3 bg-slate-900 text-white py-2 rounded-lg font-semibold hover:bg-slate-800 transition-colors">View Details</span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {filteredListings.map((listing, index) => (
+              <SRPListingCard
+                key={listing.id}
+                listing={listing}
+                index={index}
+                isCompared={compareList.includes(listing.id)}
+                onToggleCompare={toggleCompare}
+                onBeforeNavigate={() => {
+                  const state = {
+                    searchQuery,
+                    activeCollection,
+                    showFilters,
+                    sortBy,
+                    filters,
+                    scrollY: window.scrollY,
+                  };
+                  sessionStorage.setItem('lbf_srp_state', JSON.stringify(state));
+                }}
+              />
+            ))}
           </div>
         ) : (
           <div className="text-center py-12">
