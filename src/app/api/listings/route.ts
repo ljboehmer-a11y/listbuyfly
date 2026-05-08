@@ -218,7 +218,22 @@ export async function GET(request: NextRequest) {
         callerId !== null &&
         callerId !== undefined &&
         (listing as any).userId === callerId;
-      const payload = isOwner ? listing : stripSellerPii(listing);
+
+      // Paid listings where the seller opted into contact visibility may
+      // expose sellerPhone so the SRP click-to-reveal phone button works.
+      // Email stays stripped — phone requires active user action (tap/click)
+      // and is the explicitly paid feature; email is harvested passively.
+      const isPaidContact =
+        listing.tier === 'paid' && (listing.showContactInfo ?? true) && listing.sellerPhone;
+
+      let payload: any;
+      if (isOwner) {
+        payload = listing;
+      } else if (isPaidContact) {
+        payload = { ...stripSellerPii(listing), sellerPhone: listing.sellerPhone };
+      } else {
+        payload = stripSellerPii(listing);
+      }
       return NextResponse.json(payload, { status: 200 });
     }
 

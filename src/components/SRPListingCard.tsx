@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, Mail, Heart } from 'lucide-react';
+import { Phone, Mail, Heart, Loader } from 'lucide-react';
 import { Listing } from '@/lib/types';
 import ImageCarousel from '@/components/ImageCarousel';
 import { getListingImages } from '@/data/aircraftImages';
@@ -26,6 +26,42 @@ export default function SRPListingCard({
 }: SRPListingCardProps) {
   const router = useRouter();
   const [showLeadModal, setShowLeadModal] = useState(false);
+  const [phoneState, setPhoneState] = useState<'idle' | 'loading' | 'revealed' | 'unavailable'>('idle');
+  const [phone, setPhone] = useState<string | null>(null);
+  const phoneRef = useRef<HTMLDivElement>(null);
+
+  // Close phone popover on outside click
+  useEffect(() => {
+    if (phoneState !== 'revealed') return;
+    const handler = (e: MouseEvent) => {
+      if (phoneRef.current && !phoneRef.current.contains(e.target as Node)) {
+        setPhoneState('idle');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [phoneState]);
+
+  async function handlePhoneClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (phoneState === 'revealed') { setPhoneState('idle'); return; }
+    if (phoneState === 'loading') return;
+    setPhoneState('loading');
+    try {
+      const res = await fetch(`/api/listings?id=${listing.id}`);
+      const data = await res.json();
+      if (data.sellerPhone) {
+        setPhone(data.sellerPhone);
+        setPhoneState('revealed');
+      } else {
+        setPhoneState('unavailable');
+        setTimeout(() => setPhoneState('idle'), 2500);
+      }
+    } catch {
+      setPhoneState('unavailable');
+      setTimeout(() => setPhoneState('idle'), 2500);
+    }
+  }
 
   const images =
     listing.images && listing.images.length > 0
@@ -156,16 +192,44 @@ export default function SRPListingCard({
               {listing.sellerName || 'Private Seller'}
             </p>
             <div className="flex gap-2 flex-shrink-0">
-              {/* Phone — stop propagation so card click doesn't fire, link to ADP contact */}
-              <Link
-                href={`${adpHref}#contact`}
-                onClick={(e) => { e.stopPropagation(); onBeforeNavigate(); }}
-                className="w-10 h-10 rounded-full border-2 border-slate-800 flex items-center justify-center text-slate-800 hover:bg-slate-800 hover:text-white transition-colors"
-                title="Call seller"
-              >
-                <Phone className="w-4 h-4" />
-              </Link>
-              {/* Email — stop propagation, open lead modal */}
+              {/* Phone — reveals number for paid opt-in listings; tel: link on mobile triggers call */}
+              <div ref={phoneRef} className="relative">
+                <button
+                  onClick={handlePhoneClick}
+                  className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    phoneState === 'revealed'
+                      ? 'bg-slate-800 border-slate-800 text-white'
+                      : 'border-slate-800 text-slate-800 hover:bg-slate-800 hover:text-white'
+                  }`}
+                  title="Call seller"
+                >
+                  {phoneState === 'loading'
+                    ? <Loader className="w-4 h-4 animate-spin" />
+                    : <Phone className="w-4 h-4" />
+                  }
+                </button>
+                {/* Phone popover */}
+                {phoneState === 'revealed' && phone && (
+                  <div className="absolute bottom-12 right-0 z-20 bg-slate-900 text-white text-sm rounded-lg shadow-xl px-4 py-2.5 whitespace-nowrap">
+                    <a
+                      href={`tel:${phone.replace(/\D/g, '')}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-semibold tracking-wide hover:text-amber-400 transition-colors"
+                    >
+                      {phone}
+                    </a>
+                    {/* Caret */}
+                    <div className="absolute -bottom-1.5 right-3.5 w-3 h-3 bg-slate-900 rotate-45" />
+                  </div>
+                )}
+                {phoneState === 'unavailable' && (
+                  <div className="absolute bottom-12 right-0 z-20 bg-slate-900 text-white text-xs rounded-lg shadow-xl px-3 py-2 whitespace-nowrap">
+                    Not available
+                    <div className="absolute -bottom-1.5 right-3.5 w-3 h-3 bg-slate-900 rotate-45" />
+                  </div>
+                )}
+              </div>
+              {/* Email — opens lead modal */}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowLeadModal(true); }}
                 className="w-10 h-10 rounded-full border-2 border-slate-800 flex items-center justify-center text-slate-800 hover:bg-slate-800 hover:text-white transition-colors"
