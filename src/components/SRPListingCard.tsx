@@ -54,11 +54,11 @@ export default function SRPListingCard({
       {/* Entire card is clickable; interactive children stop propagation */}
       <div
         onClick={navigateToADP}
-        className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow flex flex-col cursor-pointer ${
+        className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow flex flex-col cursor-pointer group ${
           isCompared ? 'ring-2 ring-amber-500' : ''
         }`}
       >
-        {/* Image */}
+        {/* Image + heart overlay */}
         <div className="aspect-[4/3] relative flex-shrink-0 overflow-hidden bg-slate-100">
           <ImageCarousel
             images={images}
@@ -66,6 +66,16 @@ export default function SRPListingCard({
             variant="card"
             featured={isFeatured}
           />
+          {/* Heart / compare button — stop propagation so card click doesn't fire */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleCompare(listing.id); }}
+            className={`absolute top-2 right-2 p-2 rounded-lg shadow-md transition-all z-10 ${
+              isCompared ? 'bg-amber-500 opacity-100' : 'bg-white opacity-0 group-hover:opacity-100'
+            }`}
+            title={isCompared ? 'Remove from saved' : 'Save listing'}
+          >
+            <Heart className={`w-5 h-5 ${isCompared ? 'text-slate-900 fill-slate-900' : 'text-slate-600'}`} />
+          </button>
         </div>
 
         {/* Content */}
@@ -102,7 +112,7 @@ export default function SRPListingCard({
 
           {/* Description */}
           {listing.description && (
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            <p className="text-sm text-gray-600 mb-3 line-clamp-3">
               {listing.description}{' '}
               <span className="font-semibold text-slate-900 underline whitespace-nowrap">
                 Read More
@@ -164,42 +174,6 @@ export default function SRPListingCard({
                 <Mail className="w-4 h-4" />
               </button>
             </div>
-          </div>
-
-          {/* Compare + Save */}
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleCompare(listing.id); }}
-              className={`flex items-center justify-center gap-2 border rounded-lg py-2 text-xs font-bold transition-colors ${
-                isCompared
-                  ? 'bg-amber-500 border-amber-500 text-slate-900'
-                  : 'border-gray-300 text-slate-700 hover:border-slate-700'
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 border-2 rounded-sm flex items-center justify-center flex-shrink-0 ${
-                  isCompared ? 'border-slate-900 bg-white' : 'border-gray-400'
-                }`}
-              >
-                {isCompared && (
-                  <svg viewBox="0 0 10 8" className="w-2 h-1.5 fill-none stroke-slate-900 stroke-2">
-                    <polyline points="1,4 3.5,7 9,1" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </span>
-              COMPARE
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleCompare(listing.id); }}
-              className={`flex items-center justify-center gap-2 border rounded-lg py-2 text-xs font-bold transition-colors ${
-                isCompared
-                  ? 'bg-amber-500 border-amber-500 text-slate-900'
-                  : 'border-gray-300 text-slate-700 hover:border-slate-700'
-              }`}
-            >
-              <Heart className={`w-3.5 h-3.5 ${isCompared ? 'fill-slate-900 stroke-slate-900' : ''}`} />
-              SAVE
-            </button>
           </div>
 
           {/* View Listing CTA */}
