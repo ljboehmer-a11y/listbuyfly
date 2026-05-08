@@ -69,7 +69,7 @@ export default function SRPListingCard({
           {/* Heart / compare button — stop propagation so card click doesn't fire */}
           <button
             onClick={(e) => { e.stopPropagation(); onToggleCompare(listing.id); }}
-            className={`absolute top-2 right-2 p-2 rounded-lg shadow-md transition-all z-10 ${
+            className={`absolute top-2 left-2 p-2 rounded-lg shadow-md transition-all z-10 ${
               isCompared ? 'bg-amber-500 opacity-100' : 'bg-white opacity-0 group-hover:opacity-100'
             }`}
             title={isCompared ? 'Remove from saved' : 'Save listing'}
