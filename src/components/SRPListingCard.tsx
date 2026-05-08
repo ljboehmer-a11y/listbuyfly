@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Phone, Mail, Heart } from 'lucide-react';
 import { Listing } from '@/lib/types';
 import ImageCarousel from '@/components/ImageCarousel';
@@ -23,6 +24,7 @@ export default function SRPListingCard({
   onToggleCompare,
   onBeforeNavigate,
 }: SRPListingCardProps) {
+  const router = useRouter();
   const [showLeadModal, setShowLeadModal] = useState(false);
 
   const images =
@@ -40,62 +42,47 @@ export default function SRPListingCard({
       : 'Call for Price';
 
   const listingTitle = `${listing.year} ${listing.make} ${listing.model}`;
+  const adpHref = `/listing/${listing.id}`;
 
-  const lastUpdate = (() => {
-    const raw = listing.listedDate;
-    if (!raw) return null;
-    const d = new Date(raw);
-    if (isNaN(d.getTime())) return null;
-    return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-  })();
+  function navigateToADP() {
+    onBeforeNavigate();
+    router.push(adpHref);
+  }
 
   return (
     <>
+      {/* Entire card is clickable; interactive children stop propagation */}
       <div
-        className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow flex flex-col ${
+        onClick={navigateToADP}
+        className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow flex flex-col cursor-pointer ${
           isCompared ? 'ring-2 ring-amber-500' : ''
         }`}
       >
-        {/* Image — full width, links to ADP */}
-        <Link
-          href={`/listing/${listing.id}`}
-          prefetch={index < 6}
-          onClick={onBeforeNavigate}
-          className="block aspect-[4/3] relative flex-shrink-0 overflow-hidden bg-slate-100"
-        >
+        {/* Image */}
+        <div className="aspect-[4/3] relative flex-shrink-0 overflow-hidden bg-slate-100">
           <ImageCarousel
             images={images}
             alt={listingTitle}
             variant="card"
             featured={isFeatured}
           />
-        </Link>
+        </div>
 
         {/* Content */}
         <div className="flex flex-col flex-1 px-4 pt-3 pb-4">
 
           {/* Title */}
-          <Link
-            href={`/listing/${listing.id}`}
-            prefetch={index < 6}
-            onClick={onBeforeNavigate}
-            className="no-underline"
-          >
-            <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-snug hover:text-amber-600 transition-colors mb-1">
-              {listingTitle}
-            </h3>
-          </Link>
+          <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-snug mb-2">
+            {listingTitle}
+          </h3>
 
-          {/* N-number */}
-          {listing.nNumber && (
-            <p className="text-sm text-gray-500 mb-2">{listing.nNumber}</p>
-          )}
-
-          {/* Price */}
-          <p className="text-2xl font-bold text-amber-500 mb-3">{priceDisplay}</p>
-
-          {/* Amber divider */}
-          <div className="h-px bg-amber-400 mb-3" />
+          {/* Price + N-number on same row */}
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-2xl font-bold text-amber-500">{priceDisplay}</p>
+            {listing.nNumber && (
+              <p className="text-sm text-gray-400 ml-3 flex-shrink-0">{listing.nNumber}</p>
+            )}
+          </div>
 
           {/* Stats: TTAF + SMOH */}
           <div className="grid grid-cols-2 gap-x-4 mb-3">
@@ -117,13 +104,9 @@ export default function SRPListingCard({
           {listing.description && (
             <p className="text-sm text-gray-600 mb-3 line-clamp-2">
               {listing.description}{' '}
-              <Link
-                href={`/listing/${listing.id}`}
-                onClick={onBeforeNavigate}
-                className="font-semibold text-slate-900 underline whitespace-nowrap"
-              >
-                More Info
-              </Link>
+              <span className="font-semibold text-slate-900 underline whitespace-nowrap">
+                Read More
+              </span>
             </p>
           )}
 
@@ -159,24 +142,22 @@ export default function SRPListingCard({
 
           {/* Seller name + circular contact buttons */}
           <div className="flex items-center justify-between mb-3">
-            <div className="min-w-0">
-              <p className="font-bold text-slate-900 text-sm truncate">
-                {listing.sellerName || 'Private Seller'}
-              </p>
-            </div>
-            <div className="flex gap-2 flex-shrink-0 ml-2">
-              {/* Phone — links to ADP contact section (phone stripped from list response) */}
+            <p className="font-bold text-slate-900 text-sm truncate min-w-0 mr-2">
+              {listing.sellerName || 'Private Seller'}
+            </p>
+            <div className="flex gap-2 flex-shrink-0">
+              {/* Phone — stop propagation so card click doesn't fire, link to ADP contact */}
               <Link
-                href={`/listing/${listing.id}#contact`}
-                onClick={onBeforeNavigate}
+                href={`${adpHref}#contact`}
+                onClick={(e) => { e.stopPropagation(); onBeforeNavigate(); }}
                 className="w-10 h-10 rounded-full border-2 border-slate-800 flex items-center justify-center text-slate-800 hover:bg-slate-800 hover:text-white transition-colors"
                 title="Call seller"
               >
                 <Phone className="w-4 h-4" />
               </Link>
-              {/* Email — opens lead modal */}
+              {/* Email — stop propagation, open lead modal */}
               <button
-                onClick={() => setShowLeadModal(true)}
+                onClick={(e) => { e.stopPropagation(); setShowLeadModal(true); }}
                 className="w-10 h-10 rounded-full border-2 border-slate-800 flex items-center justify-center text-slate-800 hover:bg-slate-800 hover:text-white transition-colors"
                 title="Email seller"
               >
@@ -186,9 +167,9 @@ export default function SRPListingCard({
           </div>
 
           {/* Compare + Save */}
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="grid grid-cols-2 gap-2 mb-3">
             <button
-              onClick={() => onToggleCompare(listing.id)}
+              onClick={(e) => { e.stopPropagation(); onToggleCompare(listing.id); }}
               className={`flex items-center justify-center gap-2 border rounded-lg py-2 text-xs font-bold transition-colors ${
                 isCompared
                   ? 'bg-amber-500 border-amber-500 text-slate-900'
@@ -209,7 +190,7 @@ export default function SRPListingCard({
               COMPARE
             </button>
             <button
-              onClick={() => onToggleCompare(listing.id)}
+              onClick={(e) => { e.stopPropagation(); onToggleCompare(listing.id); }}
               className={`flex items-center justify-center gap-2 border rounded-lg py-2 text-xs font-bold transition-colors ${
                 isCompared
                   ? 'bg-amber-500 border-amber-500 text-slate-900'
@@ -221,12 +202,11 @@ export default function SRPListingCard({
             </button>
           </div>
 
-          {/* Last Update */}
-          {lastUpdate && (
-            <p className="text-center text-[11px] text-gray-400 mt-1">
-              Last Update: {lastUpdate}
-            </p>
-          )}
+          {/* View Listing CTA */}
+          <span className="block text-center bg-slate-900 text-white py-2 rounded-lg font-semibold text-sm hover:bg-slate-800 transition-colors">
+            View Listing
+          </span>
+
         </div>
       </div>
 
