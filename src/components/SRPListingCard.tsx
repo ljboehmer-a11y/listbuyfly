@@ -124,7 +124,7 @@ export default function SRPListingCard({
 
           {/* Price + N-number on same row */}
           <div className="flex items-baseline justify-between mb-3">
-            <p className="text-2xl font-bold text-amber-500">{priceDisplay}</p>
+            <p className="text-2xl font-bold text-slate-900">{priceDisplay}</p>
             {listing.nNumber && (
               <p className="text-sm text-gray-400 ml-3 flex-shrink-0">{listing.nNumber}</p>
             )}
