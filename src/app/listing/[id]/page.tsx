@@ -13,18 +13,32 @@ import DescriptionBlock from '@/components/DescriptionBlock';
 import { getListingById, getAllListings } from '@/lib/db';
 import ViewCounter from '@/components/ViewCounter';
 
-// Dynamic rendering — every listing (including user-created) served on demand
-export const dynamic = 'force-dynamic';
+// ISR: pre-render all active listings at build time; regenerate every 24 h.
+// Pages not in generateStaticParams (new listings) are rendered on first
+// request then cached — dynamicParams defaults to true.
+export const revalidate = 86400;
 
 interface ListingPageProps {
   params: Promise<{ id: string }>;
 }
 
 export async function generateStaticParams() {
-  // Pre-render seed listings at build time
-  return seedListings.map((listing) => ({
-    id: listing.id,
-  }));
+  // Pre-render all active DB listings at build time. Falls back to seed data
+  // if the DB is unavailable during the build (e.g. preview with no DB).
+  let dbIds: string[] = [];
+  try {
+    const active = await getAllListings();
+    dbIds = active
+      .filter((l) => l.status === 'active')
+      .map((l) => l.id);
+  } catch {
+    // DB unreachable at build time — seed listings below cover the fallback
+  }
+
+  const seedIds = seedListings.map((l) => l.id);
+  // Deduplicate: seed listings may already be in the DB
+  const allIds = Array.from(new Set([...dbIds, ...seedIds]));
+  return allIds.map((id) => ({ id }));
 }
 
 export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
@@ -51,13 +65,28 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const priceStr = listing.price && listing.price > 0
     ? `$${listing.price.toLocaleString()}`
     : 'Call for Price';
-  const title = `${listing.year} ${listing.make} ${listing.model} ${listing.nNumber} - ${priceStr} | List Buy Fly`;
-  const description = `${listing.year} ${listing.make} ${listing.model} for sale. ${listing.description ? listing.description.slice(0, 150) : ''} TTAF: ${listing.ttaf}, SMOH: ${listing.smoh}.`;
+
+  const title = `${listing.year} ${listing.make} ${listing.model} ${listing.nNumber ? `(${listing.nNumber})` : ''} — ${priceStr} | List Buy Fly`;
+
+  // First 160 chars of description for the meta tag; fall back to a
+  // structured summary when the seller didn't write one.
+  const rawDesc = listing.description?.trim() || '';
+  const metaDescription = rawDesc.length > 0
+    ? rawDesc.slice(0, 160)
+    : `${listing.year} ${listing.make} ${listing.model} for sale — ${priceStr}. TTAF ${listing.ttaf} hrs, SMOH ${listing.smoh} hrs. Located in ${listing.city}, ${listing.state}.`;
+
   const canonicalUrl = `https://listbuyfly.com/listing/${listing.id}`;
+
+  // Use the first real listing image for OG/Twitter; fall back to the
+  // site-wide aircraft placeholder.
+  const firstImage =
+    (listing.images && listing.images.length > 0)
+      ? listing.images[0]
+      : getListingImages(listing.id, listing.make)[0] ?? 'https://listbuyfly.com/og-aircraft.png';
 
   return {
     title,
-    description,
+    description: metaDescription,
     alternates: {
       canonical: canonicalUrl,
     },
@@ -66,12 +95,12 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
       : { index: false, follow: false },
     openGraph: {
       title,
-      description,
+      description: metaDescription,
       type: 'website',
       url: canonicalUrl,
       images: [
         {
-          url: 'https://listbuyfly.com/og-aircraft.png',
+          url: firstImage,
           width: 1200,
           height: 630,
           alt: `${listing.year} ${listing.make} ${listing.model}`,
@@ -81,7 +110,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
     twitter: {
       card: 'summary_large_image',
       title,
-      description,
+      description: metaDescription,
     },
   };
 }
@@ -393,42 +422,101 @@ export default async function ListingPage({ params }: ListingPageProps) {
         </div>
       </main>
 
-      {/* JSON-LD Structured Data — only emit aggregateRating when both exterior
-          and interior ratings are real values. Missing fields would produce
-          NaN and trip Google's Rich Results validator. */}
+      {/* JSON-LD Structured Data — schema.org/Vehicle gives crawlers and
+          AI tools a machine-readable record of every key field without
+          requiring JavaScript execution. Only emit optional fields when
+          they have real values to avoid NaN in Google's Rich Results
+          validator. */}
       {(() => {
         const ext = parseInt(listing.exteriorRating);
         const intr = parseInt(listing.interiorRating);
         const hasRatings = !isNaN(ext) && ext > 0 && !isNaN(intr) && intr > 0;
+
+        // Prefer actual listing photos; fall back to Unsplash placeholders
+        const imageUrls = listingImages.length > 0
+          ? listingImages
+          : ['https://listbuyfly.com/og-aircraft.png'];
+
         const structured: Record<string, unknown> = {
           '@context': 'https://schema.org',
-          '@type': 'Product',
+          '@type': 'Vehicle',
           name: `${listing.year} ${listing.make} ${listing.model}`,
-          description: listing.description,
-          image: 'https://listbuyfly.com/aircraft.png',
+          description: listing.description || '',
+          image: imageUrls,
           brand: { '@type': 'Brand', name: listing.make },
+          model: listing.model,
+          vehicleModelDate: listing.year.toString(),
+          manufacturer: listing.make,
+          // N-number is the aircraft's unique registration identifier
+          vehicleIdentificationNumber: listing.nNumber || undefined,
+
+          // Engine details
+          vehicleEngine: listing.engine
+            ? { '@type': 'EngineSpecification', name: listing.engine }
+            : undefined,
+
+          // Flight hours expressed as mileage equivalent
+          mileageFromOdometer: listing.ttaf > 0
+            ? { '@type': 'QuantitativeValue', value: listing.ttaf, unitCode: 'HUR', name: 'Total Time Airframe (hours)' }
+            : undefined,
+
+          // SMOH as an additional property
+          additionalProperty: [
+            listing.smoh > 0 && {
+              '@type': 'PropertyValue',
+              name: 'SMOH',
+              description: 'Since Major Overhaul (hours)',
+              value: listing.smoh,
+            },
+            listing.tbo > 0 && {
+              '@type': 'PropertyValue',
+              name: 'TBO',
+              description: 'Time Between Overhauls (hours)',
+              value: listing.tbo,
+            },
+          ].filter(Boolean),
+
+          // Location
+          availableAtOrFrom: {
+            '@type': 'Place',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: listing.city,
+              addressRegion: listing.state,
+              addressCountry: 'US',
+            },
+          },
+
+          // Seller
+          seller: {
+            '@type': 'Person',
+            name: listing.sellerName || 'Private Seller',
+          },
+
           offers: {
             '@type': 'Offer',
             url: `https://listbuyfly.com/listing/${listing.id}`,
             priceCurrency: 'USD',
-            price: listing.price.toString(),
+            price: listing.price > 0 ? listing.price.toString() : undefined,
             availability: 'https://schema.org/InStock',
+            itemCondition: 'https://schema.org/UsedCondition',
           },
-          identifier: listing.nNumber,
-          sameAs: `https://listbuyfly.com/listing/${listing.id}`,
         };
+
         if (hasRatings) {
           structured.aggregateRating = {
             '@type': 'AggregateRating',
-            ratingValue: ((ext + intr) / 2).toString(),
+            ratingValue: ((ext + intr) / 2).toFixed(1),
             bestRating: '10',
             worstRating: '1',
+            ratingCount: 1,
           };
         }
+
         return (
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured, null, 0) }}
           />
         );
       })()}
