@@ -82,8 +82,25 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
   const rawDesc = listing.description?.trim() || '';
   const useSellerDesc = rawDesc.length >= 100;
 
+  // Cut at the nearest sentence or clause boundary under 155 chars so we never
+  // surface a truncated mid-phrase in Google snippets or AI summaries.
+  // Priority: sentence end (./!/?) → clause end (,/;) → word boundary.
+  // The 60-char floor prevents cutting absurdly early on short first sentences.
+  // Appends the listing URL as a CTA when truncation occurs.
+  function smartTruncate(text: string, limit = 155): string {
+    if (text.length <= limit) return text;
+    const suffix = ' View listing at listbuyfly.com';
+    const slice = text.slice(0, limit);
+    const sentenceEnd = Math.max(slice.lastIndexOf('.'), slice.lastIndexOf('!'), slice.lastIndexOf('?'));
+    if (sentenceEnd > 60) return text.slice(0, sentenceEnd + 1) + suffix;
+    const clauseEnd = Math.max(slice.lastIndexOf(','), slice.lastIndexOf(';'));
+    if (clauseEnd > 60) return text.slice(0, clauseEnd + 1) + suffix;
+    const wordEnd = slice.lastIndexOf(' ');
+    return text.slice(0, wordEnd > 0 ? wordEnd : limit) + suffix;
+  }
+
   const metaDescription = (() => {
-    if (useSellerDesc) return rawDesc.slice(0, 160);
+    if (useSellerDesc) return smartTruncate(rawDesc);
 
     // Annual status + date
     const annualStr = listing.annualCurrent
@@ -111,9 +128,7 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
       badges,
     ].filter(Boolean).join(' ');
 
-    // Hard-cap at 160 chars; structured sentences are already concise so
-    // this rarely truncates, but guard defensively.
-    return parts.slice(0, 160);
+    return smartTruncate(parts);
   })();
 
   const canonicalUrl = `https://listbuyfly.com/listing/${listing.id}`;
