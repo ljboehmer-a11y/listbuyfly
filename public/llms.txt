@@ -1,0 +1,18 @@
+List Buy Fly is a pilot-built general aviation aircraft marketplace serving buyers and sellers across the United States. Sellers pay a flat listing fee with no auction percentages or sale commissions. Every listing captures structured specifications including total time airframe (TTAF), time since major overhaul (SMOH), time between overhauls (TBO), engine type, annual inspection status, logbook completeness, damage history, avionics, and location. Buyers can search and filter by any of these fields, set a ZIP code radius to find aircraft within driving or flying distance, and compare up to four aircraft side by side. Contact between buyers and sellers is direct with no broker intermediary.
+
+URLs
+
+https://listbuyfly.com
+Homepage and search results page. Displays all active aircraft listings with filtering by price, airframe hours, make, annual status, logbook status, damage history, and distance from a ZIP code.
+
+https://listbuyfly.com/about
+Plain-text marketing page describing what List Buy Fly is, how it works for buyers and sellers, and why it differs from legacy classified and auction platforms.
+
+https://listbuyfly.com/api/listings
+Machine-readable JSON feed of all active aircraft listings. Returns an array of objects each containing: id, title, year, make, model, price, ttaf, smoh, engine, location, state, tags (logs/annual/clean), seller name, and listing URL. No images. No seller contact information. CORS headers are set so this endpoint can be fetched directly by external tools and AI agents. Revalidates every hour.
+
+https://listbuyfly.com/guides
+Buyer and seller guides covering pre-buy inspections, logbook evaluation, understanding engine overhaul time, and avionics assessment. Content sourced from the List Buy Fly editorial team.
+
+https://listbuyfly.com/sitemap.xml
+XML sitemap listing all active listing pages, guide pages, and static pages. Revalidates every hour.
