@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         '/api/stripe/',    // payment and webhook handlers
         '/api/geocode',    // internal geocoding utility
         '/api/cron/',      // cron job endpoints
+        '/api/leads',      // buyer PII (name, email, phone) — POST only, nothing to crawl
         '/dashboard',      // authenticated seller dashboard
       ],
     },
