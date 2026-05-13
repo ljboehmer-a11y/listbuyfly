@@ -148,10 +148,15 @@ export default async function ListingPage({ params }: ListingPageProps) {
   // Show contact info only if paid AND seller opted in (undefined = legacy/seed data, default true)
   const isPaid = listing.tier === 'paid' && (listing.showContactInfo ?? true);
 
-  // User-created listings have images in the images array; seed listings use Unsplash
-  const listingImages = listing.images && listing.images.length > 0
+  // User-created listings have images in the images array; seed listings use Unsplash.
+  // Strip any data URIs (base64-encoded images) — they can be tens of MB each and
+  // would blow the Vercel ISR 19 MB page-size limit when serialized into __NEXT_DATA__
+  // and the JSON-LD script tag. Only real URLs should ever reach the DB via /api/upload,
+  // but guard defensively here so a bad row never takes down the deployment.
+  const rawImages = listing.images && listing.images.length > 0
     ? listing.images
     : getListingImages(listing.id, listing.make);
+  const listingImages = rawImages.filter((url) => !url.startsWith('data:'));
 
   return (
     <div className="min-h-screen bg-white">
@@ -432,10 +437,12 @@ export default async function ListingPage({ params }: ListingPageProps) {
         const intr = parseInt(listing.interiorRating);
         const hasRatings = !isNaN(ext) && ext > 0 && !isNaN(intr) && intr > 0;
 
-        // Prefer actual listing photos; fall back to Unsplash placeholders
-        const imageUrls = listingImages.length > 0
-          ? listingImages
-          : ['https://listbuyfly.com/og-aircraft.png'];
+        // Prefer actual listing photos; fall back to site placeholder.
+        // Cap at 5 to keep the JSON-LD script tag small — Google only
+        // uses the first image for rich results anyway.
+        const imageUrls = (listingImages.length > 0
+          ? listingImages.slice(0, 5)
+          : ['https://listbuyfly.com/og-aircraft.png']);
 
         const structured: Record<string, unknown> = {
           '@context': 'https://schema.org',
