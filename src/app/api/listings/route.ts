@@ -237,12 +237,47 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(payload, { status: 200 });
     }
 
-    // List response: always strip PII. Individual listing detail pages
-    // render contact info server-side from getListingById() directly, so
-    // this doesn't affect the click-to-reveal UX on paid listings.
-    const listings = await getAllListings();
-    const sanitized = listings.map(stripSellerPii);
-    return NextResponse.json(sanitized, { status: 200 });
+    // List response — lightweight public feed.
+    // - Active listings only (sold/inactive/pending_payment excluded)
+    // - No images, descriptions, or avionics arrays (keeps payload <100KB)
+    // - No seller PII (email, phone, userId)
+    // - CORS open so external tools (AI assistants, aggregators) can read it
+    const allListings = await getAllListings();
+    const feed = allListings
+      .filter((l) => l.status === 'active')
+      .map((l) => ({
+        id: l.id,
+        title: `${l.year} ${l.make} ${l.model}`,
+        year: l.year,
+        make: l.make,
+        model: l.model,
+        price: l.price,
+        ttaf: l.ttaf,
+        smoh: l.smoh,
+        engine: l.engine,
+        location: l.city,
+        state: l.state,
+        tags: {
+          logs: l.logsComplete,
+          annual: l.annualCurrent,
+          clean: !l.damageHistory,
+        },
+        sellerName: l.sellerName || null,
+        url: `https://listbuyfly.com/listing/${l.id}`,
+      }));
+
+    return NextResponse.json(feed, {
+      status: 200,
+      headers: {
+        // Open CORS so AI tools, aggregators, and partner sites can consume
+        // this feed. Mutations (POST/PATCH/DELETE) are separately protected
+        // by requireSameOrigin + Clerk auth — CORS on GET is safe.
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
   } catch (error) {
     console.error('Error fetching listings:', error);
     return NextResponse.json(
@@ -250,6 +285,18 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// CORS preflight for the public feed
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 export async function PATCH(request: NextRequest) {

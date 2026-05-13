@@ -3,6 +3,10 @@ import { getAllListings } from '@/lib/db';
 import { listings as seedListings } from '@/data/listings';
 import { getGuideSlugs } from '@/lib/guides';
 
+// Regenerate every hour so new listings appear in Google's crawl queue
+// without waiting for the next full deploy.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let listings;
 
@@ -16,9 +20,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listings = seedListings;
   }
 
-  const listingRoutes = listings.map((listing) => ({
+  // Only index pages that are publicly visible and crawlable
+  const activeListings = listings.filter((l) => l.status === 'active');
+
+  const listingRoutes = activeListings.map((listing) => ({
     url: `https://listbuyfly.com/listing/${listing.id}`,
-    lastModified: new Date(),
+    // Use the real listed/updated date so Google knows when the content changed
+    lastModified: listing.listedDate ? new Date(listing.listedDate) : new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }));
