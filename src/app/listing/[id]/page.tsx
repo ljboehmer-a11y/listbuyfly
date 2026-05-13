@@ -68,12 +68,53 @@ export async function generateMetadata({ params }: ListingPageProps): Promise<Me
 
   const title = `${listing.year} ${listing.make} ${listing.model} ${listing.nNumber ? `(${listing.nNumber})` : ''} — ${priceStr} | List Buy Fly`;
 
-  // First 160 chars of description for the meta tag; fall back to a
-  // structured summary when the seller didn't write one.
+  // Build a rich structured description for meta/og tags.
+  // Use the seller's text when it's substantive (≥100 chars); otherwise
+  // generate one from structured fields so crawlers and AI tools get
+  // the key specs without needing to parse the page body.
+  //
+  // Generated template (all fields pulled from the listing row):
+  //   "[[year]] [[make]] [[model]] for sale in [[city]], [[state]].
+  //    [[price]]. [[ttaf]] hours total time, [[smoh]] SMOH on [[engine]].
+  //    Annual current as of [[annualDate]]. [[logsComplete]]. [[damageHistory]]."
+  //
+  // Fields are omitted gracefully when zero/empty (e.g. no TTAF → skip that clause).
   const rawDesc = listing.description?.trim() || '';
-  const metaDescription = rawDesc.length > 0
-    ? rawDesc.slice(0, 160)
-    : `${listing.year} ${listing.make} ${listing.model} for sale — ${priceStr}. TTAF ${listing.ttaf} hrs, SMOH ${listing.smoh} hrs. Located in ${listing.city}, ${listing.state}.`;
+  const useSellerDesc = rawDesc.length >= 100;
+
+  const metaDescription = (() => {
+    if (useSellerDesc) return rawDesc.slice(0, 160);
+
+    // Annual status + date
+    const annualStr = listing.annualCurrent
+      ? `Annual current as of ${new Date(listing.annualDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}.`
+      : 'Annual not current.';
+
+    // Engine time
+    const engineTime = listing.smoh > 0
+      ? `${listing.ttaf > 0 ? `${listing.ttaf.toLocaleString()} hours total time, ` : ''}${listing.smoh.toLocaleString()} SMOH on ${listing.engine}.`
+      : listing.ttaf > 0
+        ? `${listing.ttaf.toLocaleString()} hours total time on ${listing.engine}.`
+        : `${listing.engine}.`;
+
+    // Maintenance badges
+    const badges = [
+      listing.logsComplete ? 'Complete logs.' : '',
+      !listing.damageHistory ? 'No damage history.' : '',
+    ].filter(Boolean).join(' ');
+
+    const parts = [
+      `${listing.year} ${listing.make} ${listing.model} for sale in ${listing.city}, ${listing.state}.`,
+      `${priceStr}.`,
+      engineTime,
+      annualStr,
+      badges,
+    ].filter(Boolean).join(' ');
+
+    // Hard-cap at 160 chars; structured sentences are already concise so
+    // this rarely truncates, but guard defensively.
+    return parts.slice(0, 160);
+  })();
 
   const canonicalUrl = `https://listbuyfly.com/listing/${listing.id}`;
 
