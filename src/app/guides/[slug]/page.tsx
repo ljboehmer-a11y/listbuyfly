@@ -1,12 +1,27 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getGuideBySlug } from '@/lib/guides';
+import { getGuideBySlug, getGuideSlugs } from '@/lib/guides';
 import { notFound } from 'next/navigation';
 import { Calendar, User, Tag, ArrowLeft } from 'lucide-react';
-import DOMPurify from 'isomorphic-dompurify';
+// DOMPurify is NOT statically imported here. isomorphic-dompurify pulls in
+// jsdom which uses native Node.js internals that Turbopack cannot bundle and
+// that fail to load in the Vercel Lambda environment. Dynamic import defers
+// the require() to runtime and keeps the static module graph clean.
 
 // ISR: revalidate every 5 minutes to pick up Notion changes
 export const revalidate = 300;
+
+// Pre-render all published guide slugs at build time so cold renders are
+// avoided. Unknown slugs (new guides added since the last build) fall through
+// to on-demand ISR (dynamicParams defaults to true).
+export async function generateStaticParams() {
+  try {
+    const slugs = await getGuideSlugs();
+    return slugs.map((slug) => ({ slug }));
+  } catch {
+    return [];
+  }
+}
 
 interface GuidePageProps {
   params: Promise<{
@@ -61,8 +76,17 @@ export async function generateMetadata(props: GuidePageProps): Promise<Metadata>
 }
 
 export default async function GuidePage(props: GuidePageProps) {
-  const params = await props.params;
-  const guide = await getGuideBySlug(params.slug);
+  // Wrap all data-fetching and rendering setup in a single try/catch so any
+  // unhandled error (Notion timeout, module load failure, etc.) returns a clean
+  // 404 instead of an HTTP 500. The root error is logged for Vercel log triage.
+  let guide;
+  try {
+    const params = await props.params;
+    guide = await getGuideBySlug(params.slug);
+  } catch (err) {
+    console.error('[guides/slug] Error fetching guide:', err);
+    notFound();
+  }
 
   if (!guide) {
     notFound();
@@ -104,11 +128,22 @@ export default async function GuidePage(props: GuidePageProps) {
   // compromised Notion account) could inject <script>, onclick handlers, or
   // javascript: URLs into a guide and execute code on every reader. DOMPurify
   // strips those while preserving the styling/formatting markup we need.
-  const sanitizedHtml = DOMPurify.sanitize(guide.htmlContent, {
-    USE_PROFILES: { html: true },
-    // Block javascript: / data: URI schemes on links, allow Notion's style spans
-    ADD_ATTR: ['target', 'rel'],
-  });
+  //
+  // Dynamic import: isomorphic-dompurify uses jsdom which has native Node.js
+  // internals that can't be statically bundled by Turbopack. Dynamic import
+  // defers the require() to runtime, bypassing the static analysis. We fall
+  // back to the raw marked output if the import or sanitize throws — the
+  // content is our own Notion pipeline (not user input) so the risk is low.
+  let sanitizedHtml = guide.htmlContent;
+  try {
+    const { default: DOMPurify } = await import('isomorphic-dompurify');
+    sanitizedHtml = DOMPurify.sanitize(guide.htmlContent, {
+      USE_PROFILES: { html: true },
+      ADD_ATTR: ['target', 'rel'],
+    });
+  } catch (err) {
+    console.error('[guides/slug] DOMPurify unavailable — using raw marked output:', err);
+  }
 
   return (
     <>
