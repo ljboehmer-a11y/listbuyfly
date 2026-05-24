@@ -36,6 +36,9 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "handoff-for-claude-code",
+    "security-fix-handoff",
+    "security-fix-handoff-copy"
   ]
 }

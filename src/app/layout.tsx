@@ -40,6 +40,16 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://listbuyfly.com',
   },
+  // Google Search Console ownership verification.
+  // Add NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to Vercel env vars with the
+  // value from GSC (Settings → Ownership verification → HTML tag method).
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? {
+        verification: {
+          google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+        },
+      }
+    : {}),
 };
 
 export default function RootLayout({
